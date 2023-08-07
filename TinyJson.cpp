@@ -57,18 +57,6 @@ string JsonValue::getAs()
     return this->deserialize( this->strValue );
 }
 
-template <>
-JsonObjects JsonValue::getAs()
-{
-    return this->properties;
-}
-
-template <>
-JsonArrays JsonValue::getAs()
-{
-    return this->arr;
-}
-
 string JsonValue::deserialize( const string& src ) noexcept
 {
     string out = "";

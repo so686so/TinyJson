@@ -27,7 +27,24 @@ int main()
          << js["life"]["mean"]["is"].getAs<int>() << endl;
 
 
-    cout << "[#003] Get value from index : array --------------------------------------------" << endl;
+    cout << "[#003] tryGetAs<T>() ---------------------------------------------------------" << endl;
+
+    // Use like, if( {value}.tryGetAs<T>( T& ref ) )
+    // If tryGetAs result true, you can get value by ref
+    int refInt = 0;
+    if( ( js["repo_name"] ).tryGetAs<int>( refInt ) )
+        cout << "try get success, value(int): " << refInt << endl;
+    else
+        cout << "try get failed, [\"repo_name\"] value is not int" << endl;
+
+    string refStr = "";
+    if( ( js["repo_name"] ).tryGetAs<string>( refStr ) )
+        cout << "try get success, value(str): " << refStr << endl;
+    else
+        cout << "try get failed, [\"repo_name\"] value is not string" << endl;
+
+
+    cout << "[#004] Get value from index : array --------------------------------------------" << endl;
 
     auto bool_value = js["examples"][1]["boolean"].getAs<bool>();
     if( bool_value == true ) {
@@ -36,7 +53,7 @@ int main()
     }
 
 
-    cout << "[#004] Check value type --------------------------------------------------------" << endl;
+    cout << "[#005] Check value type --------------------------------------------------------" << endl;
 
     // get subset of json data
     JsonValue jsChild = js["examples"][1]["mixed"];
@@ -53,7 +70,7 @@ int main()
     cout << "isNull?   true  == " << boolalpha << jsChild[3].isNull()   << endl; // null
 
 
-    cout << "[#005] Set new value -----------------------------------------------------------" << endl;
+    cout << "[#006] Set new value -----------------------------------------------------------" << endl;
 
     // js["NotYet"] is not set yet
     cout << js["NotYet"].toString() << ", isNull: " << boolalpha << js["NotYet"].isNull() << endl;
@@ -63,7 +80,7 @@ int main()
     cout << js.toString() << endl;
 
 
-    cout << "[#006] Replace value -----------------------------------------------------------" << endl;
+    cout << "[#007] Replace value -----------------------------------------------------------" << endl;
 
     // 42
     cout << "Before(int): " << js["life"]["mean"]["is"].getAs<int>() << endl;
@@ -80,7 +97,7 @@ int main()
         cout << "After(str):  " << js["life"]["mean"]["is"].getAs<string>() << endl;
 
 
-    cout << "[#007] Replace value 2 ---------------------------------------------------------" << endl;
+    cout << "[#008] Replace value 2 ---------------------------------------------------------" << endl;
 
     // Change value, Object
     js["life"]["mean"]["is"] = JsonObject("Language", "C++");
@@ -98,47 +115,20 @@ int main()
     cout << js["life"]["mean"]["is"].toString() << endl;
 
 
-    // TODO
-    // make json ojbect : simple
-    // make json object : complex
-    // make json object : using string -> json
-    // save file
-    return 0;
+    cout << "[#009] Make json ojbect : simple -----------------------------------------------" << endl;
 
-    // Get Value From Key
-    cout << "Invalid ?= " << js["examples"][0]["tag_name"].getAs<string>()     << endl;
-    cout << "3.14159 ?= " << js["examples"][1]["pie"].getAs<double>()          << endl;
-    cout << "16      ?= " << js["examples"][1]["number_array"][4].getAs<int>() << endl;
-    cout << "=============================================================" << endl;
-
-    js["examples"][1]["pie"] = JsonObject("change", 12345);
-    js["examples"][0] = JsonArray( "1", 3.45, "Test", true );
-    js["examples"][1]["number_array"][4] = JsonNULL();
-    js["examples"][1]["this_is"] = "changeValue!";
-    js["new"] = 3;
-    js["chain"]["method"] = "created";
-    js["autoParse"] = "{ \"KEY\": 42, \"LIST\": [ 1, 2, 3.4, 5, null ] }";
-
-    cout << js.toString() << endl;
-    cout << "=============================================================" << endl;
-
-    js.saveFile("./test_json_to_file_echo.json");
-
-// Test : Json -> File ( simple )
-    JsonValue jsSmp = JsonObject("Key", "value"); // JSON 포맷 만들면서 바로 key:value 집어넣기
-
-    // Print Console
+    // Insert key:value directly while creating json format
+    JsonValue jsSmp = JsonObject("Key", "value");
+    // print pretty
     cout << jsSmp.toString() << endl;
-    cout << "=============================================================" << endl;
 
-    // Save
-    jsSmp.saveFile("test_json_to_file_smp.json");
-    cout << "=============================================================" << endl;
 
-// Test : Json -> File ( more complex )
-    JsonValue jsCpx = JsonObject(); // 빈 JSON 포맷 만들기
+    cout << "[#010] Make json ojbect : complex ----------------------------------------------" << endl;
 
-    // 체인 메소드 방식으로 데이터 집어넣기
+    // make empty json format
+    JsonValue jsCpx = JsonObject();
+
+    // insert data using chain method
     jsCpx.addObject( "First",  1 )
          .addObject( "Second", 4.56 )
          .addObject( "Array",  JsonArray ( "1", 3.45, "Test", true ) )
@@ -148,13 +138,29 @@ int main()
          .addObject( "Third",  JsonNULL() )
          .addObject( "Last",   false );
 
-    // Print Console
+    // print pretty
     cout << jsCpx.toString() << endl;
-    cout << "=============================================================" << endl;
 
-    // Save
-    jsCpx.saveFile("test_json_to_file_cpx.json");
-    cout << "=============================================================" << endl;
+
+    cout << "[#010] Make json ojbect : easy way ---------------------------------------------" << endl;
+
+    JsonValue jsEasy = JsonObject();
+
+    jsEasy["Hello"]    = "World";
+    jsEasy["Count"]    = 777;
+    jsEasy["Nullable"] = JsonNULL();
+    jsEasy["List"]     = JsonArray( 1, 2, 3, 4 );
+    jsEasy["List2"]    = "[ 4, 5, 6, 7, { \"inList\": [ true, null, -3, 0.123 ] }, false ]";
+    jsEasy["Objects"]  = JsonObject( "child", "value" );
+    jsEasy["Objects2"] = "{ \"Child2\" : \"value2\", \"My\": null }";
+
+    // print pretty
+    cout << jsEasy.toString() << endl;
+
+
+    cout << "[#011] File save ---------------------------------------------------------------" << endl;
+
+    js.saveFile( "test_sjon_to_file_echo.json" );
 
     return 0;
 }

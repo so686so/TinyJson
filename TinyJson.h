@@ -186,6 +186,32 @@ public:
         return ret;
     }
 
+    template <typename T>
+    const bool tryGetAs( T& ref )
+    {
+        try {
+            if( std::is_same<T, string>::value && this->isString() ) {
+                ref = getAs<T>();
+            }
+            else if( std::is_same<T, double>::value && this->isDouble() ) {
+                ref = getAs<T>();
+            }
+            else if( std::is_same<T, int>::value && this->isInt() ) {
+                ref = getAs<T>();
+            }
+            else if( std::is_same<T, bool>::value && this->isBool() ) {
+                ref = getAs<T>();
+            }
+            else {
+                return false;
+            }
+        }
+        catch( ... ) {
+            return false;
+        }
+        return true;
+    }
+
     // Returns how many elements the JsonValue has if it is Objects or Arrays
     const size_t size() noexcept;
 

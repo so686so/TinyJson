@@ -1,5 +1,7 @@
 # TinyJson
 
+<p align="center"><img src="./TinyJson.png"></p>
+
 ---
 
 - ### Simple Json Parser using C++ ( Reference by [jute](https://github.com/amir-s/jute) )
@@ -17,19 +19,16 @@
 
 ## Environment
 - It works ``Linux``
-- No library dependencies
+- <u>No library dependencies</u>
 
 <br>
 
-
-## Compile & Run
-> **[Download]** git clone https://github.com/so686so/SimpleTool.git  // TODO
+## Compile & Run example
+> **1. [Download]** git clone https://github.com/so686so/TinyJson.git
 >  
-> _Direcotry : SimpleTool/JsonParser_  //TODO
->   
-> **[Compile]** g++ -o runFile JsonParser.h JsonParser.cpp main.cpp  
+> **2. [Compile]** g++ -o runFile TinyJson.h TinyJson.cpp main.cpp  
 >  
-> **[Run]** ./runFile  
+> **3. [Run]** ./runFile  
 ---
 
 <br>
@@ -37,19 +36,19 @@
 ## HOW TO USE
 
 ### 1. Load and Parse Json
-- [ Sample Json File ] [**test_file_to.json**](./test_file_to_json.json)
+- [ Sample Json File ] [**Data.json**](./Data.json)
 ```cpp
 //main.cpp
 
-#include "JsonParser.h"
+#include "TinyJson.h"
 
 using namespace std;
-using namespace SimpleTool;
+using namespace TinyJson;
 
 int main( void )
 {
     // Load file & parse
-    JsonValue js = Parser::parseFile("./test_file_to_json.json");
+    JsonValue js = Parser::parseFile("./Data.json");
 
     // print Console
     cout << js.toString() << endl;

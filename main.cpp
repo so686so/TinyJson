@@ -142,7 +142,7 @@ int main()
     cout << jsCpx.toString() << endl;
 
 
-    cout << "[#010] Make json ojbect : easy way ---------------------------------------------" << endl;
+    cout << "[#011] Make json ojbect : easy way ---------------------------------------------" << endl;
 
     JsonValue jsEasy = JsonObject();
 
@@ -158,7 +158,7 @@ int main()
     cout << jsEasy.toString() << endl;
 
 
-    cout << "[#011] File save ---------------------------------------------------------------" << endl;
+    cout << "[#012] File save ---------------------------------------------------------------" << endl;
 
     js.saveFile( "test_sjon_to_file_echo.json" );
 

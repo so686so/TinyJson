@@ -19,6 +19,7 @@
 
 ## Environment
 - It works ``Linux``
+- ``C++11`` ``C++14`` ``C++17``
 - <u>No library dependencies</u>
 
 <br>
@@ -170,6 +171,8 @@ int main( void )
         cout << "try get success, value(str): " << refStr << endl;
     else
         cout << "try get failed, [\"repo_name\"] value is not string" << endl;
+
+    return 0;
 }
 ```
 
@@ -342,6 +345,7 @@ int main( void )
     // Enter here : changed type string!
     if( js["life"]["mean"]["is"].isString() ) 
         cout << "After(str):  " << js["life"]["mean"]["is"].getAs<string>() << endl;
+
     return 0;
 }
 ```
@@ -446,6 +450,7 @@ int main( void )
 
     // print pretty
     cout << jsCpx.toString() << endl;
+    
     return 0;
 }
 ```

@@ -34,6 +34,14 @@
 
 <br>
 
+## Note
+
+No rigorous error checking.  
+The parser assumes that the input JSON is in a valid format.  
+It is less than 1000 LOC. Improvements are welcome!
+
+<br>
+
 ## HOW TO USE
 
 > **01.** [Load and Parse Json](#1-load-and-parse-json)  
@@ -450,7 +458,7 @@ int main( void )
 
     // print pretty
     cout << jsCpx.toString() << endl;
-    
+
     return 0;
 }
 ```

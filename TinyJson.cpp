@@ -279,6 +279,29 @@ JsonValue& JsonValue::operator=( JsonValue other )
     return (*this);
 }
 
+vector<string> JsonValue::keys()
+{
+    vector<string> keys;
+    keys.clear();
+
+    switch( this->jType )
+    {
+    case JsonType::OBJECT:
+        for( auto& pair : this->properties ) {
+            keys.emplace_back( pair.first );
+        }
+        break;
+
+    default:
+        break;
+    }
+    return keys;
+}
+
+vector<JsonValue>& JsonValue::list()
+{
+    return this->arr;
+}
 
 string JsonValue::toString() noexcept
 {

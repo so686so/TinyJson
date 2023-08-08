@@ -111,6 +111,12 @@ public:
         return (*this);
     };
 
+    // get current json object key list
+    vector<string> keys();
+
+    // get current json values if JsonArray type
+    vector<JsonValue>& list();
+
 // Region :: JsonValue struct insertion functions after parsing in Parser
 // ---------------------------------------------------------------------------------------
     void addProperty( const string& key, const JsonValue& value ) noexcept; // +JsonObject

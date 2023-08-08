@@ -11,7 +11,7 @@
     > - [x] [Add] Distinguish between integers and real numbers
     > - [x] [Add] Exception handling when invalid key and index values are referenced
     > - [x] [Add] Adding json data in a natural way in code ( json["key"] = value )
-    > - [ ] [Add] foreach : key, value 
+    > - [x] [Add] foreach? : key, value
 
 ---
 

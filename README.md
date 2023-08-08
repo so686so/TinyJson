@@ -35,6 +35,24 @@
 
 ## HOW TO USE
 
+> **01.** [Load and Parse Json](#1-load-and-parse-json)  
+> **02.** [Get value from key : objectn](#2-get-value-from-key--object)  
+> **03.** [tryGetAs<T>()](#3-trygetas)  
+> **04.** [Get value from index : array](#4-get-value-from-index--array)  
+> **05.** [Check value type](#5-check-value-type)  
+> **06.** [Set new value](#6-set-new-value)  
+> **07.** [Replace value](#7-replace-value)  
+> **08.** [Replace value 2](#8-replace-value-2)  
+> **09.** [Make json ojbect : simple](#9-make-json-ojbect--simple)  
+> **10.** [Make json ojbect : complex](#10-make-json-ojbect--complex)  
+> **11.** [Make json ojbect : easy way](#11-make-json-ojbect--easy-way)  
+> **12.** [File save](#12-file-save)  
+> **13.** [Get keys or list](#13-get-keys-or-list)  
+
+---
+
+<br>
+
 ### 1. Load and Parse Json
 - [ Sample Json File ] [**Data.json**](./Data.json)
 ```c++
@@ -56,6 +74,10 @@ int main( void )
     return 0;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```shell
 # Console Stdout
 {
@@ -95,6 +117,8 @@ int main( void )
 }
 ```
 
+</details>
+
 <br>
 
 ### 2. Get value from key : object
@@ -114,11 +138,16 @@ int main( void )
     return 0;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```shell
 # Console Stdout
 key: repo_name, value: TinyJson
 amir-s, 42
 ```
+</details>
 
 <br>
 
@@ -143,11 +172,17 @@ int main( void )
         cout << "try get failed, [\"repo_name\"] value is not string" << endl;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```shell
 # Console Stdout
 try get failed, ["repo_name"] value is not int
 try get success, value(str): TinyJson
 ```
+
+</details>
 
 <br>
 
@@ -166,11 +201,17 @@ int main( void )
     return 0;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```shell
 # Console Stdout
 number is 8
 pie value 3.14159
 ```
+
+</details>
 
 <br>
 
@@ -196,6 +237,10 @@ int main( void )
     return 0;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```shell
 # Console Stdout
 isInt?    true  == true
@@ -209,6 +254,8 @@ isObject? true  == true
 isArray?  true  == true
 isNull?   true  == true
 ```
+
+</details>
 
 <br>
 
@@ -228,6 +275,10 @@ int main( void )
     return 0;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```shell
 # Console Stdout
 null, isNull: true
@@ -269,6 +320,8 @@ null, isNull: true
 }
 ```
 
+</details>
+
 <br>
 
 ### 7. Replace value
@@ -292,11 +345,17 @@ int main( void )
     return 0;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```shell
 # Console Stdout
 Before(int): 42
 After(str):  The reason for living isn't just coding...
 ```
+
+</details>
 
 <br>
 
@@ -324,6 +383,10 @@ int main( void )
     return 0;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```shell
 # Console Stdout
 {
@@ -332,6 +395,8 @@ int main( void )
 null
 [ 1, null, true, -3.5, "ABC" ]
 ```
+
+</details>
 
 <br>
 
@@ -347,12 +412,18 @@ int main( void )
     return 0;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```shell
 # Console Stdout
 {
  "Key": "value"
 }
 ```
+
+</details>
 
 <br>
 
@@ -378,6 +449,10 @@ int main( void )
     return 0;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```shell
 # Console Stdout
 {
@@ -393,6 +468,8 @@ int main( void )
  "Last": false
 }
 ```
+
+</details>
 
 <br>
 
@@ -416,6 +493,10 @@ int main( void )
     return 0;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```shell
 # Console Stdout
 {
@@ -436,9 +517,11 @@ int main( void )
 }
 ```
 
+</details>
+
 <br>
 
-### 11. File save
+### 12. File save
 ```cpp
 int main( void )
 {
@@ -449,13 +532,87 @@ int main( void )
     return 0;
 }
 ```
+
+<details>
+<summary> Result </summary>
+
 ```bash
 # Console Stdout
 'File save done : test_sjon_to_file_echo.json'
 ```
 
+</details>
+
+<br>
+
+### 13. Get keys or list
+```cpp
+int main( void )
+{
+    JsonValue js = Parser::parseFile( "./Data.json" );
+
+    // get keys
+    for( auto& k : js.keys() ) cout << k << endl;
+
+    // get lists
+    for( auto& eachValue : js["examples"].list() ) {
+        cout << "----------------------------------------------" << endl;
+        cout << eachValue.toString() << endl;
+    }
+
+    return 0;
+}
+```
+
+<details>
+<summary> Result </summary>
+
+```bash
+# Console Stdout
+repo_name
+examples
+thanks
+reference_by
+life
+NotYet
+----------------------------------------------
+{
+ "author": "so686so",
+ "name": "SoByungJun",
+ "attr": [ {
+   "key": "link",
+   "value": "http://github.com/so686so/TinyJson"
+  }, {
+   "key": "target",
+   "value": "_everyone_"
+  } ]
+}
+----------------------------------------------
+{
+ "this_is": [ "array", "of", "strings" ],
+ "number_array": [ 1, 2, 4, 8, 16 ],
+ "pie": 3.14159,
+ "boolean": true,
+ "bug": null,
+ "mixed": [ 1, 2, {
+   "arg_1": -100.12345,
+   "arg_2": false
+  }, null, 0.17171771, true, [ "this", [ "in_array is", true ] ], "end list!" ]
+}
+----------------------------------------------
+{
+ "test_json": true
+}
+----------------------------------------------
+{
+ "control_chars": "hellow \\n worlds! \nice to meet you:tab:\tEND\bS\n"
+}
+```
+
+</details>
+
 <br>
 
 ---  
 
-# License: [MIT](https://opensource.org/licenses/MIT)
+## License: [MIT](https://opensource.org/licenses/MIT)

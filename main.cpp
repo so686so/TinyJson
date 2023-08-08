@@ -162,5 +162,18 @@ int main()
 
     js.saveFile( "test_sjon_to_file_echo.json" );
 
+
+    cout << "[#013] Get keys or list --------------------------------------------------------" << endl;
+
+    // get keys
+    for( auto& k : js.keys() ) cout << k << endl;
+
+    // get lists
+    for( auto& eachValue : js["examples"].list() ) {
+        cout << "----------------------------------------------" << endl;
+        cout << eachValue.toString() << endl;
+    }
+
+
     return 0;
 }

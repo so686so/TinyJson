@@ -1,5 +1,7 @@
 [Rr]un[Ff]ile
 [Bb]uild
 
+cov_html
+
 test_*.*
 .vscode

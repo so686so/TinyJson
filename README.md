@@ -1,6 +1,6 @@
 # TinyJson
 
-<p align="center"><img src="./TinyJson.png"></p>
+<p align="center"><img src="./asset/TinyJson.png"></p>
 
 ---
 
@@ -20,7 +20,8 @@
 ## Environment
 - It works ``Linux``
 - ``C++11`` ``C++14`` ``C++17``
-- <u>No library dependencies</u>
+- ``Cmake`` _(optional)_
+- **<u>No library dependencies</u>**
 
 <br>
 
@@ -63,7 +64,7 @@ It is less than 1000 LOC. Improvements are welcome!
 <br>
 
 ### 1. Load and Parse Json
-- [ Sample Json File ] [**Data.json**](./Data.json)
+- [ Sample Json File ] [**Data.json**](./data/Data.json)
 ```c++
 //main.cpp
 
@@ -76,7 +77,7 @@ int main( void )
 {
     // Parse target json file
     JsonValue js = Parser::parseFile( "./Data.json" );
-    
+
     // Print Console
     cout << js.toString() << endl;
 

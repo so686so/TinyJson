@@ -1,3 +1,5 @@
 [Rr]un[Ff]ile
+[Bb]uild
+
 test_*.*
 .vscode

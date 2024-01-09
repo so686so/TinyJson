@@ -5,3 +5,7 @@ cov_html
 
 test_*.*
 .vscode
+
+test/googletest*
+test/*.tar.gz
+/*.json

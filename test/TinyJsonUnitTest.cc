@@ -24,6 +24,33 @@ protected:
     JsonValue* js;
 };
 
+class JsonCreateFixture : public ::testing::Test
+{
+protected:
+    JsonCreateFixture()
+        : js( new JsonValue{ "{ \"StringKey\" : \"StringVal\", \"NullKey\": null, \"IntKey\": 123 }" } )
+    {
+    }
+
+    ~JsonCreateFixture()
+    {
+        delete js;
+    }
+
+    void SetUp() override
+    {
+        //
+    }
+
+    JsonValue* js;
+};
+
+TEST( ConstructTest, Create )
+{
+    JsonValue jsn = JsonValue{"{\"A\":123}"};
+    EXPECT_TRUE(jsn.isValid());
+}
+
 TEST( ConstructTest, TypeInt )
 {
     JsonValue jsn = JsonValue(JsonType::INT);
@@ -49,15 +76,37 @@ TEST( ConstructTest, TypeBool )
 }
 
 
-TEST_F( JsonParseFixture, Parse )
+TEST_F( JsonParseFixture, Parse_Check_Int )
 {
     EXPECT_EQ( 42, (*js)["life"]["mean"]["is"].getAs<int>() );
 }
 
 
-TEST_F( JsonParseFixture, Parse2 )
+TEST_F( JsonParseFixture, Parse_Check_String )
 {
     EXPECT_EQ( std::string("TinyJson"), (*js)["repo_name"].getAs<string>() );
+}
+
+TEST_F( JsonParseFixture, Parse_Check_Array )
+{
+    EXPECT_TRUE( (*js)["examples"].isArray() );
+}
+
+TEST_F( JsonParseFixture, Parse_Check_Object )
+{
+    EXPECT_TRUE( (*js)["examples"][0].isObject() );
+    EXPECT_TRUE( (*js)["life"].isObject() );
+    EXPECT_TRUE( (*js)["life"]["mean"].isObject() );
+}
+
+TEST_F( JsonCreateFixture, Create_Check_Int )
+{
+    EXPECT_EQ( 123, (*js)["IntKey"].getAs<int>() );
+}
+
+TEST_F( JsonCreateFixture, Create_Check_String )
+{
+    EXPECT_EQ( std::string("StringVal"), (*js)["StringKey"].getAs<string>() );
 }
 
 int main( int argc, char** argv )

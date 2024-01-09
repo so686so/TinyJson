@@ -77,7 +77,7 @@ int main()
 
     // just add
     js["NotYet"] = "Hello World!";
-    cout << js.toString() << endl;
+    cout << js.toString(ToStringType::Pretty) << endl;
 
 
     cout << "[#007] Replace value -----------------------------------------------------------" << endl;

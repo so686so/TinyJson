@@ -1,11 +1,13 @@
+# Install gtest
 apt update -y
 apt install wget -y
 wget --no-check-certificate https://github.com/google/googletest/archive/release-1.10.0.tar.gz
 tar zxf release-1.10.0.tar.gz
 cd googletest-release-1.10.0
 cmake .
-make
+make -j16
 make install
 ldconfig
 
-apt install lcov
+# Install lcov
+apt install lcov -y

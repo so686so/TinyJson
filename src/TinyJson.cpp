@@ -22,7 +22,7 @@ JsonValue JsonArray()
 
 JsonValue JsonNULL()
 {
-    return JsonValue( JsonType::NUL );
+    return JsonValue( JsonType::NULL_TYPE );
 }
 
 // About JsonValue ==========================================================
@@ -100,15 +100,60 @@ inline string JsonValue::makeSpace( const unsigned int space ) noexcept
     return s;
 }
 
+const string JsonValue::toStringStrip( void ) noexcept
+{
+    switch( this->jType )
+    {
+    case JsonType::STRING:    return string("\"") + this->strValue + string("\"");
+    case JsonType::INT:       return strValue;
+    case JsonType::DOUBLE:    return strValue;
+    case JsonType::BOOLEAN:   return strValue;
+    case JsonType::NULL_TYPE: return "null";
+
+    case JsonType::OBJECT:
+    {
+        int index = 0;
+        string s = string("{ ");
+        for( auto& prop : this->properties ) {
+            s += string("\"") 
+              +  prop.first  // key
+              +  string("\": ") 
+              +  prop.second.toStringStrip() // value
+              +  string( ( ++index == (int)this->properties.size() ) ? "" : "," )
+              +  string(" ");
+        }
+        s += string("}");
+        return s;
+    }
+
+    case JsonType::ARRAY:
+    {
+        int index = 0;
+        string s = string("[ ");
+        for( auto& elem : this->arr ) {
+            if( index++ > 0 ) s += ", ";
+            s += elem.toStringStrip();
+        }
+        s += string(" ]");
+        return s;
+    }
+
+    default:
+    case JsonType::UNKNOWN:
+        break;
+    }
+    return "#UNKNOWN#";
+}
+
 const string JsonValue::toStringPretty( const unsigned int space = 1 ) noexcept
 {
     switch( this->jType )
     {
-    case JsonType::STRING:  return string("\"") + this->strValue + string("\"");
-    case JsonType::INT:     return strValue;
-    case JsonType::DOUBLE:  return strValue;
-    case JsonType::BOOLEAN: return strValue;
-    case JsonType::NUL:     return "null";
+    case JsonType::STRING:    return string("\"") + this->strValue + string("\"");
+    case JsonType::INT:       return strValue;
+    case JsonType::DOUBLE:    return strValue;
+    case JsonType::BOOLEAN:   return strValue;
+    case JsonType::NULL_TYPE: return "null";
 
     case JsonType::OBJECT:
     {
@@ -303,9 +348,17 @@ vector<JsonValue>& JsonValue::list()
     return this->arr;
 }
 
-string JsonValue::toString() noexcept
+string JsonValue::toString( ToStringType type ) noexcept
 {
-    return this->toStringPretty();
+    switch( type )
+    {
+    case ToStringType::Pretty:
+        return this->toStringPretty();
+    
+    default:
+    case ToStringType::Strip:
+        return this->toStringStrip();
+    }
 }
 
 const bool JsonValue::saveFile( const char* filename )
@@ -313,7 +366,7 @@ const bool JsonValue::saveFile( const char* filename )
     ofstream file(filename);
     if( !file.is_open() ) return false;
 
-    file << this->toString();
+    file << this->toString( ToStringType::Pretty );
     file.close();
 
     cout << "File save done : " << filename << endl;
@@ -321,6 +374,16 @@ const bool JsonValue::saveFile( const char* filename )
 }
 
 // About Parser ==========================================================
+const bool Parser::isObject( const string& str ) noexcept
+{
+    return !(Parser::tokenize( str, false ).empty());
+}
+
+const bool Parser::isObject( const char* str ) noexcept
+{
+    return Parser::isObject( string{str} );
+}
+
 inline const bool Parser::isWhiteSpace( const char c )
 {
     return isspace(c);
@@ -405,7 +468,7 @@ vector<Parser::Token> Parser::tokenize( const string& src, const bool validation
                 continue;                
             }
             else if( str[k] == 'n' && k+3 < len && str.substr( k, 4 ) == "null" ) {
-                tokens.emplace_back( "null", TokenType::NUL );
+                tokens.emplace_back( "null", TokenType::NULL_TYPE );
                 k += 4;
                 continue;
             }
@@ -464,12 +527,17 @@ vector<Parser::Token> Parser::tokenize( const string& src, const bool validation
         assert( check_cbrace  == 0 && "Mismatched pairs of { , }" );
     }
 
+    if( check_bracket != 0 || check_cbrace != 0 )
+        return vector<Parser::Token> {};
     return tokens;
 }
 
-JsonValue Parser::jsonParse( const vector<Token>& v, int& curPos, const bool validation_on = true )
+JsonValue Parser::jsonParse( const vector<Token>& v, int& curPos, const bool validation_on )
  {
     JsonValue current = JsonObject().setType( JsonType::UNKNOWN );
+
+    if( v.empty() && curPos == 0 )
+        return current;
 
     const int i = curPos;
     const TokenType tokenType = v[i].type;
@@ -557,9 +625,9 @@ JsonValue Parser::jsonParse( const vector<Token>& v, int& curPos, const bool val
         break;
     }
 
-    case TokenType::NUL:
+    case TokenType::NULL_TYPE:
     {
-        current.setType( JsonType::NUL ).setString( v[i].value );
+        current.setType( JsonType::NULL_TYPE ).setString( v[i].value );
         curPos = i+1;
         break;
     }
@@ -574,6 +642,12 @@ JsonValue Parser::jsonParse( const vector<Token>& v, int& curPos, const bool val
         while( !bracket_check.empty() ) bracket_check.pop();
 
     return current;
+}
+
+JsonValue Parser::parse( const char* str, const bool valid_on = true )
+{
+    int startPos = 0;
+    return Parser::jsonParse( tokenize( string{str}, valid_on ), startPos, valid_on );
 }
 
 JsonValue Parser::parse( const string& str, const bool valid_on = true )

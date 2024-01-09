@@ -5,7 +5,7 @@
  * Simple & tiny json parser
  * ------------------------------------------
  * Author      : So Byung Jun
- * Last Update : 2023.08.07
+ * Last Update : 2024.01.09
  * ------------------------------------------
  * Reference : https://github.com/amir-s/jute
  */
@@ -20,12 +20,66 @@
 #include <type_traits>
 #include <cassert>
 
-namespace TinyJson
-{
+namespace TinyJson {
 using namespace std;
 
-// Default json data unit declaration
+// Json data parser class
 class JsonValue;
+class Parser
+{
+public:
+    /**
+     * @brief  parse json from in-code string format ( const char* )
+     * @param  str target string for parsing with std::string type
+     * @param  validation_on If the order of parentheses is not correct, the assert error occurs.
+     */
+    static JsonValue parse( const char* str, const bool validation_on );
+    static JsonValue parse( const string& str, const bool validation_on );
+    
+    static JsonValue parseFile( const string& fileName );
+
+    static const bool isObject( const char* str ) noexcept;
+    static const bool isObject( const string& str ) noexcept;
+
+// define struct & enum class
+private:
+    enum class TokenType
+    {
+        UNKNOWN,
+        STRING,
+        INT,
+        DOUBLE,
+        CBRACE_OPEN,   // { , curl brace
+        CBRACE_CLOSE,  // }
+        BRACKET_OPEN,  // [ , square bracket
+        BRACKET_CLOSE, // ]
+        COMMNA,        // ,
+        COLON,         // :
+        BOOLEAN,
+        NULL_TYPE      // NULL
+    };
+
+    struct Token
+    {
+        string    value;
+        TokenType type;
+
+        Token( string _value = "", TokenType _type = TokenType::UNKNOWN )
+            : value(_value)
+            , type(_type)
+        {}
+    };
+
+// functions
+private:
+    inline static const bool isWhiteSpace( const char c );
+
+    static const int nextWhiteSpace ( const string& src, const int startPos ) noexcept;
+    static const int skipWhiteSpaces( const string& src, const int pos ) noexcept;
+
+    static vector<Token> tokenize( const string& src, const bool validation_on );
+    static JsonValue jsonParse( const vector<Token>& v, int& curPos, const bool validation_on = true );
+}; // Class:Parser
 
 // You can get JsonValue only by using JsonObject() and JsonArray() functions.
 // ---------------------------------------------------------------------------
@@ -47,7 +101,12 @@ enum class JsonType {
     BOOLEAN,
     INT,
     DOUBLE,
-    NUL // Cannot be used 'NULL' because it is a reserved keyword
+    NULL_TYPE // Cannot be used 'NULL' because it is a reserved keyword
+};
+
+enum class ToStringType {
+    Strip,
+    Pretty,
 };
 
 // Json data unit class
@@ -80,7 +139,7 @@ private:
         }
         catch ( ... ) {
             // cout << "JsonValue Set Failed, Type: " << static_cast<int>(this->jType) << ", Value: " << initVal << endl;
-            this->setType( JsonType::NUL );
+            this->setType( JsonType::NULL_TYPE );
             this->setString( "null" );
         }
     }
@@ -97,10 +156,29 @@ private:
 
     inline string makeSpace( const unsigned int space ) noexcept;
     const  string toStringPretty( const unsigned int space ) noexcept;
+    const  string toStringStrip() noexcept;
 
 public:
     // Constructor : Initialize with JsonType only, not set value
-    JsonValue( const JsonType type ) noexcept;
+    JsonValue( const JsonType type = JsonType::OBJECT ) noexcept;
+
+    // Initialize with json binray (const char*)
+    JsonValue( const char* initVal ) noexcept
+    {
+        if( Parser::isObject(initVal) == true )
+            *this = Parser::parse( string{initVal}, true );
+        else
+            *this = JsonValue(initVal);
+    }
+
+    // Initialize with json binray (string)
+    JsonValue( const string& initVal ) noexcept
+    {
+        if( Parser::isObject(initVal) == true )
+            *this = Parser::parse( initVal, true );
+        else
+            *this = JsonValue(initVal);
+    }
 
     // Destructor
     ~JsonValue() {}
@@ -168,13 +246,14 @@ public:
     void setString( const string& s ) noexcept;
 
     // Inline functions to check what type a JsonValue is
-    inline const bool isObject() { return this->jType == JsonType::OBJECT;  };
-    inline const bool isArray()  { return this->jType == JsonType::ARRAY;   };
-    inline const bool isString() { return this->jType == JsonType::STRING;  };
-    inline const bool isDouble() { return this->jType == JsonType::DOUBLE;  };
-    inline const bool isInt()    { return this->jType == JsonType::INT;     };
-    inline const bool isNull()   { return this->jType == JsonType::NUL;     };
-    inline const bool isBool()   { return this->jType == JsonType::BOOLEAN; };
+    inline const bool isObject() { return this->jType == JsonType::OBJECT;    };
+    inline const bool isArray()  { return this->jType == JsonType::ARRAY;     };
+    inline const bool isString() { return this->jType == JsonType::STRING;    };
+    inline const bool isDouble() { return this->jType == JsonType::DOUBLE;    };
+    inline const bool isInt()    { return this->jType == JsonType::INT;       };
+    inline const bool isNull()   { return this->jType == JsonType::NULL_TYPE; };
+    inline const bool isBool()   { return this->jType == JsonType::BOOLEAN;   };
+    inline const bool isValid()  { return this->jType != JsonType::UNKNOWN;   };
 
     /**Notation:
      * ---------
@@ -234,7 +313,7 @@ public:
     JsonValue& operator=( const bool value );
 
     // Convert Json -> string
-    string toString() noexcept;
+    string toString( ToStringType type = ToStringType::Strip ) noexcept;
 
     // Save File
     const bool saveFile( const char* fileName );
@@ -267,51 +346,5 @@ JsonValue JsonArray( const T& element ) {
     return JsonArray().addArray( element );
 }
 // ---------------------------------------------------------------------------------------
-
-class Parser
-{
-public:
-    static JsonValue parse( const string& str, const bool validation_on );
-    static JsonValue parseFile( const string& fileName );
-
-// define struct & enum class
-private:
-    enum class TokenType
-    {
-        UNKNOWN,
-        STRING,
-        INT,
-        DOUBLE,
-        CBRACE_OPEN,   // { , curl brace
-        CBRACE_CLOSE,  // }
-        BRACKET_OPEN,  // [ , square bracket
-        BRACKET_CLOSE, // ]
-        COMMNA,        // ,
-        COLON,         // :
-        BOOLEAN,
-        NUL            // NULL
-    };
-
-    struct Token
-    {
-        string    value;
-        TokenType type;
-
-        Token( string _value = "", TokenType _type = TokenType::UNKNOWN )
-            : value(_value)
-            , type(_type)
-        {}
-    };
-
-// functions
-private:
-    inline static const bool isWhiteSpace( const char c );
-
-    static const int nextWhiteSpace ( const string& src, const int startPos ) noexcept;
-    static const int skipWhiteSpaces( const string& src, const int pos ) noexcept;
-
-    static vector<Token> tokenize( const string& src, const bool validation_on );
-    static JsonValue jsonParse( const vector<Token>& v, int& curPos, const bool validation_on );
-}; // Class:Parser
 }; // nsp:SimpleTool
 #endif

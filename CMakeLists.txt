@@ -1,75 +1,66 @@
-cmake_minimum_required( VERSION 3.8 )
+cmake_minimum_required( VERSION 3.14 )
+project( TinyJson LANGUAGES CXX )
 
-project( TinyJson )
-
-# specify the C++ standard
-set( CMAKE_CXX_STANDARD 11 )
+# C++ 표준 설정
+set( CMAKE_CXX_STANDARD 14 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O2 -fPIC" )
 
-option( UNIT_TEST "Use unit_test for tinyjson" OFF )
+# ==============================================================================
+# [CPM Package Manager 설정]
+# ==============================================================================
+file(
+  DOWNLOAD
+  https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.38.2/CPM.cmake
+  ${CMAKE_BINARY_DIR}/CPM.cmake
+)
+include( ${CMAKE_BINARY_DIR}/CPM.cmake )
 
-if(UNIT_TEST)
-    # gcov 및 lcov를 이용하여 코드 커버리지를 측정하기 위한 설정 추가
-    set(CMAKE_C_OUTPUT_EXTENSION_REPLACE ON)
-    set(CMAKE_CXX_OUTPUT_EXTENSION_REPLACE ON)
-    add_compile_options(-g -O0 -fprofile-arcs -ftest-coverage --coverage)
-    add_link_options(--coverage)
-    link_libraries(gcov)
+# ==============================================================================
+# [TinyJson 라이브러리 타겟 설정]
+# ==============================================================================
+add_library( tinyjson_lib STATIC
+    src/TinyJson.cpp
+    include/TinyJson.h
+)
+
+target_include_directories( tinyjson_lib PUBLIC include )
+
+if( MSVC )
+    target_compile_options( tinyjson_lib PRIVATE /W4 )
+else()
+    target_compile_options( tinyjson_lib PRIVATE -Wall -Wextra )
 endif()
 
-include_directories( ${PROJECT_SOURCE_DIR} )
+# ==============================================================================
+# [Example 실행 파일 설정]
+# ==============================================================================
+add_executable( TinyJsonExample main.cpp )
 
-# TinyJson Library ==========================================
-set( LIBRARY_NAME tinyjson )
-add_library( ${LIBRARY_NAME}
-SHARED
-    src/TinyJson.cpp
-)
-include(GenerateExportHeader)
-GENERATE_EXPORT_HEADER( ${LIBRARY_NAME} )
-# TinyJson Library ==========================================
+target_link_libraries( TinyJsonExample PRIVATE tinyjson_lib )
 
-# TinyJson Example Program ==================================
-set( EXECUTABLE_NAME TinyJsonExample )
-add_executable( ${EXECUTABLE_NAME}
-    src/main.cpp
+# [추가됨] 실행 파일 출력 경로를 프로젝트 루트(${CMAKE_SOURCE_DIR})로 변경
+set_target_properties( TinyJsonExample PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
-target_include_directories( ${EXECUTABLE_NAME}
-PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-target_link_libraries( ${EXECUTABLE_NAME}
-    ${LIBRARY_NAME}
-)
-# TinyJson Example Program ==================================
 
-IF (UNIT_TEST)
-    set( TEST_TARGET_NAME TinyJsonUnitTest )
-    add_executable( ${TEST_TARGET_NAME}
-        test/TinyJsonUnitTest.cc
-    )
-    target_include_directories( ${TEST_TARGET_NAME}
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        /usr/local/include
-    )
-    target_link_directories( ${TEST_TARGET_NAME}
-    PRIVATE
-        /usr/local/lib
-    )
-    target_link_libraries( ${TEST_TARGET_NAME}
-    PRIVATE
-        ${LIBRARY_NAME}
-        gtest
-        gtest_main
-        pthread
-    )
+# ==============================================================================
+# [Catch2 단위 테스트 설정]
+# ==============================================================================
+CPMAddPackage(
+    NAME Catch2
+    GITHUB_REPOSITORY catchorg/Catch2
+    VERSION 3.5.0
+)
 
-    # 단위테스트 수행 및 코드 커버리지 측정 레포트 생성
-    add_custom_command( TARGET ${TEST_TARGET_NAME} POST_BUILD
-                        COMMENT "Execute all unit test cases and generate coverage report"
-                        COMMAND ./${TEST_TARGET_NAME}
-                        COMMAND lcov --directory . --capture --output-file app.info
-                        COMMAND genhtml -o ${CMAKE_CURRENT_SOURCE_DIR}/cov_html app.info )
+if( Catch2_ADDED )
+    add_executable( unit_tests tests/test_main.cpp )
+
+    target_link_libraries( unit_tests PRIVATE tinyjson_lib Catch2::Catch2WithMain )
+
+    include( CTest )
+    list( APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/extras" )
+    include( Catch )
+    catch_discover_tests( unit_tests )
+
+    message( STATUS "Unit tests target 'unit_tests' created." )
 endif()

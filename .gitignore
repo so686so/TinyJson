@@ -1,11 +1,5 @@
-[Rr]un[Ff]ile
 [Bb]uild
-
-cov_html
-
-test_*.*
+[Rr]un[Ff]ile
+TinyJsonExample
 .vscode
-
-test/googletest*
-test/*.tar.gz
-/*.json
+data/test*

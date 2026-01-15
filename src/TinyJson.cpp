@@ -1,679 +1,819 @@
-#include "include/TinyJson.h"
+#include "TinyJson.h"
+
+// 해당 라이브러리들은 헤더 파일에는 필요 없이
+// 소스 코드에서만 필요한 라이브러리들
+#include <iostream>
+#include <fstream>
+#include <stack>
+#include <cassert>
+#include <algorithm> // for std::swap
 
 namespace TinyJson
 {
-using namespace std;
 
-// About JsonObject & JsonArray ============================================
-JsonValue JsonObject()
+// ======================================================================================
+// [Helper 함수 구현]
+// ======================================================================================
+Json JsonObject()
 {
-    return JsonValue( JsonType::OBJECT );
+    return Json( JsonType::OBJECT );
 }
 
-JsonValue JsonObject( const string& key, const JsonValue& jsValue )
+Json JsonObject( const std::string& key, const Json& jsValue )
 {
     return JsonObject().addObject( key, jsValue );
 }
 
-JsonValue JsonArray()
+Json JsonArray()
 {
-    return JsonValue( JsonType::ARRAY );
+    return Json( JsonType::ARRAY );
 }
 
-JsonValue JsonNULL()
+Json JsonNULL()
 {
-    return JsonValue( JsonType::NULL_TYPE );
+    return Json( JsonType::NULL_TYPE );
 }
 
-// About JsonValue ==========================================================
-JsonValue::JsonValue() noexcept
+// ======================================================================================
+// [Json 생성자 및 소멸자]
+// ======================================================================================
+Json::Json() noexcept
     : strValue( "" )
-    , jType( JsonType::UNKNOWN )
+    , jType   ( JsonType::UNKNOWN )
 {
-    //
 }
 
-JsonValue::JsonValue( const JsonType type ) noexcept
+Json::Json( const JsonType type ) noexcept
     : strValue( "" )
-    , jType( type )
+    , jType   ( type )
 {
     if( this->isNull() ) this->setString( "null" );
 }
 
-/**Notation:
- * ---------
- * The C++ standard does not allow explicit specialization of class members at class scope.
- * The getAs<T>() template specials getAs<bool>() and getAs<string>() are defined outside the class.
- */
-template <>
-bool JsonValue::getAs()
-{
-    return ( this->strValue == "true" ) ? true : false;
+// 1. 문자열
+Json::Json( const char* initVal ) {
+    this->setType( JsonType::STRING );
+    this->setString( initVal );
 }
 
-template <>
-string JsonValue::getAs()
-{
-    return this->deserialize( this->strValue );
+Json::Json( const std::string& initVal ) {
+    this->setType( JsonType::STRING );
+    this->setString( initVal );
 }
 
-string JsonValue::deserialize( const string& src ) noexcept
-{
-    string out = "";
-    for( size_t i = 0; i < src.length(); ++i ) {
-        if( src[i] == '\\' && i+1 < src.length() ) {
-            if     ( src[i+1] == '\"' ) out += '"' ;
-            else if( src[i+1] == '\\' ) out += '\\';
-            else if( src[i+1] == '/'  ) out += '/' ;
-            else if( src[i+1] == 'b'  ) out += '\b';
-            else if( src[i+1] == 'f'  ) out += '\f';
-            else if( src[i+1] == 'n'  ) out += '\n';
-            else if( src[i+1] == 'r'  ) out += '\r';
-            else if( src[i+1] == 't'  ) out += '\t';
-            i++;
-            continue;
-        }
-        out += src[i];
-    }
-    return out;
+Json::Json( char initVal ) {
+    this->setType( JsonType::STRING );
+    this->setString( std::string(1, initVal) );
 }
 
-string JsonValue::serialize( const string& src ) noexcept
-{
-    string out = "";
-    for( size_t i = 0; i < src.length(); ++i ) {
-        if( src[i] == '\n' ) out += "\\n";
-        if( src[i] == '\t' ) out += "\\t";
-        if( src[i] == '\b' ) out += "\\b";
-        if( src[i] == '\r' ) out += "\\r";
-        if( src[i] == '\f' ) out += "\\f";
-        else                 out += src[i];
-    }
-    return out;
+// 2. 정수 (stringstream 사용하지 않고 성능 최적화)
+Json::Json( int initVal ) {
+    this->setType( JsonType::INT );
+    this->setString( std::to_string(initVal) );
 }
 
-inline string JsonValue::makeSpace( const unsigned int space ) noexcept 
-{
-    string s = "";
-    unsigned int n = space;
-    while( n-- > 0 ) s += " ";
-    return s;
+Json::Json( long initVal ) {
+    this->setType( JsonType::INT );
+    this->setString( std::to_string(initVal) );
 }
 
-const string JsonValue::toStringStrip( void ) noexcept
-{
-    switch( this->jType )
-    {
-    case JsonType::STRING:    return string("\"") + this->strValue + string("\"");
-    case JsonType::INT:       return strValue;
-    case JsonType::DOUBLE:    return strValue;
-    case JsonType::BOOLEAN:   return strValue;
-    case JsonType::NULL_TYPE: return "null";
-
-    case JsonType::OBJECT:
-    {
-        int index = 0;
-        string s = string("{ ");
-        for( auto& prop : this->properties ) {
-            s += string("\"") 
-              +  prop.first  // key
-              +  string("\": ") 
-              +  prop.second.toStringStrip() // value
-              +  string( ( ++index == (int)this->properties.size() ) ? "" : "," )
-              +  string(" ");
-        }
-        s += string("}");
-        return s;
-    }
-
-    case JsonType::ARRAY:
-    {
-        int index = 0;
-        string s = string("[ ");
-        for( auto& elem : this->arr ) {
-            if( index++ > 0 ) s += ", ";
-            s += elem.toStringStrip();
-        }
-        s += string(" ]");
-        return s;
-    }
-
-    default:
-    case JsonType::UNKNOWN:
-        break;
-    }
-    return "#UNKNOWN#";
+Json::Json( long long initVal ) {
+    this->setType( JsonType::INT );
+    this->setString( std::to_string(initVal) );
 }
 
-const string JsonValue::toStringPretty( const unsigned int space = 1 ) noexcept
-{
-    switch( this->jType )
-    {
-    case JsonType::STRING:    return string("\"") + this->strValue + string("\"");
-    case JsonType::INT:       return strValue;
-    case JsonType::DOUBLE:    return strValue;
-    case JsonType::BOOLEAN:   return strValue;
-    case JsonType::NULL_TYPE: return "null";
-
-    case JsonType::OBJECT:
-    {
-        int index = 0;
-        string s = string("{\n");
-        for( auto& prop : this->properties ) {
-            s += makeSpace( space ) 
-              +  string("\"") 
-              +  prop.first  // key
-              +  string("\": ") 
-              +  prop.second.toStringPretty( space + 1 ) // value
-              +  string( ( ++index == (int)this->properties.size() ) ? "" : "," )
-              +  string("\n");
-        }
-        s += makeSpace( space - 1 ) + string("}");
-        return s;
-    }
-
-    case JsonType::ARRAY:
-    {
-        int index = 0;
-        string s = string("[ ");
-        for( auto& elem : this->arr ) {
-            if( index++ > 0 ) s += ", ";
-            s += elem.toStringPretty( space + 1 );
-        }
-        s += string(" ]");
-        return s;
-    }
-
-    default:
-    case JsonType::UNKNOWN:
-        break;
-    }
-    return "#UNKNOWN#";
+// 3. 실수
+Json::Json( double initVal ) {
+    this->setType( JsonType::DOUBLE );
+    this->setString( std::to_string(initVal) );
 }
 
-void JsonValue::addProperty( const string& k, const JsonValue& v ) noexcept
-{
-    // add new key:value
-    if( this->mapIndex.find( k ) == this->mapIndex.end() ) {
-        this->mapIndex[k] = this->properties.size();
-        this->properties.emplace_back( k, v );
-    } 
-    // if key already exist, replace existing key:value
-    else {
-        JsonValue& src = const_cast<JsonValue&>(v);
-        JsonValue& dst = this->properties[this->mapIndex[k]].second;
-
-        if     ( src.isBool()   ) dst = src.getAs<bool>();
-        else if( src.isInt()    ) dst = src.getAs<int>();
-        else if( src.isString() ) dst = src.getAs<string>();
-        else if( src.isDouble() ) dst = src.getAs<double>();
-        else if( src.isNull()   ) dst = JsonNULL(); 
-        else if( src.isObject() ) dst = src;
-        else if( src.isArray()  ) dst = src;
-    }
+Json::Json( float initVal ) {
+    this->setType( JsonType::DOUBLE );
+    this->setString( std::to_string(initVal) );
 }
 
-void JsonValue::addElement( const JsonValue& v ) noexcept
-{
-    if( !this->isArray() ) {
-        cout << "addArray() canceled, target is not array type" << endl;
-        return;
-    }
-    this->arr.emplace_back(v);
+// 4. 불리언
+Json::Json( bool initVal ) noexcept {
+    this->setType( JsonType::BOOLEAN );
+    this->setString( initVal ? "true" : "false" );
 }
 
-void JsonValue::setString( const string& s ) noexcept
-{
-    assert( !s.empty() );
-    this->strValue = this->serialize( s );
-}
-
-// Returns how many elements the JsonValue has if it is Objects or Arrays
-const size_t JsonValue::size() noexcept
-{
-    switch( this->jType )
-    {
-    case JsonType::ARRAY:  return this->arr.size();
-    case JsonType::OBJECT: return this->properties.size();
-    default:               return 0;
-    }
-}
-
-JsonValue& JsonValue::operator[]( const int i )
-{
-    try {
-        if( this->jType != JsonType::ARRAY )
-            throw this->jType;
-
-        if( i >= (int)this->arr.size() )
-            throw std::out_of_range("Json get value failed, you try operator[Index] but out of range");
-
-        return this->arr[i];
-    }
-    catch( JsonType exType ) {
-        cout << "Json get value failed, you try operator[Index] but that json type not array, " 
-             << static_cast<int>(exType) << endl;
-        exit( -1 );
-    }
-    catch( const std::exception& error ) {
-        cerr << error.what() << endl;
-        exit( -1 );
-    }
-}
-
-JsonValue& JsonValue::operator[]( const string& key )
-{
-    if( this->mapIndex.find( key ) == this->mapIndex.end() ) {
-        this->addObject( key, JsonNULL() );
-    }
-    return this->properties[this->mapIndex[key]].second;
-}
-
-JsonValue& JsonValue::operator=( const int value )
-{
-    stringstream ss; ss << value;
-    this->setType( JsonType::INT ).setString( ss.str() );
-    return (*this);
-}
-
-JsonValue& JsonValue::operator=( const double value )
-{
-    stringstream ss; ss << value;
-    this->setType( JsonType::DOUBLE ).setString( ss.str() );
-    return (*this);
-}
-
-JsonValue& JsonValue::operator=( const string& value )
-{
-    JsonValue js = Parser::parse( value, false );
-
-    if( js.isArray() || js.isObject() )
-        *this = js;
-    else 
-        this->setType( JsonType::STRING ).setString( value );
-
-    return (*this);
-}
-
-JsonValue& JsonValue::operator=( const char* value )
-{
-    JsonValue js = Parser::parse( string(value), false );
-
-    if( js.isArray() || js.isObject() )
-        *this = js;
-    else 
-        this->setType( JsonType::STRING ).setString( value );
-
-    return (*this);
-}
-
-JsonValue& JsonValue::operator=( const bool value )
-{
-    this->setType( JsonType::BOOLEAN ).setString( value ? "true" : "false" );
-    return (*this);
-}
-
-JsonValue& JsonValue::operator=( JsonValue other )
+// 복사 생성자
+Json::Json( const Json& other )
 {
     this->jType      = other.jType;
     this->strValue   = other.strValue;
     this->arr        = other.arr;
     this->properties = other.properties;
     this->mapIndex   = other.mapIndex;
+}
 
+// 이동 생성자 (Move Semantics)
+Json::Json( Json&& other ) noexcept
+    : strValue  ( std::move( other.strValue ) )
+    , jType     ( other.jType )
+    , properties( std::move( other.properties ) )
+    , arr       ( std::move( other.arr ) )
+    , mapIndex  ( std::move( other.mapIndex ) )
+{
+    other.jType = JsonType::NULL_TYPE;
+}
+
+Json::~Json()
+{
+    //
+}
+
+// ======================================================================================
+// [연산자 오버로딩 구현]
+// ======================================================================================
+Json& Json::operator=( const Json& other )
+{
+    if( this != &other ){
+        this->jType      = other.jType;
+        this->strValue   = other.strValue;
+        this->arr        = other.arr;
+        this->properties = other.properties;
+        this->mapIndex   = other.mapIndex;
+    }
     return (*this);
 }
 
-vector<string> JsonValue::keys()
+Json& Json::operator=( Json&& other ) noexcept
 {
-    vector<string> keys;
-    keys.clear();
+    if( this != &other ){
+        this->strValue   = std::move( other.strValue );
+        this->jType      = other.jType;
+        this->properties = std::move( other.properties );
+        this->arr        = std::move( other.arr );
+        this->mapIndex   = std::move( other.mapIndex );
 
+        other.jType = JsonType::NULL_TYPE;
+    }
+    return (*this);
+}
+
+Json& Json::operator[]( const int i )
+{
+    if( this->jType != JsonType::ARRAY )
+        throw TinyJsonException( "Invalid access: Operator[] int used on non-array type" );
+
+    if( i < 0 || i >= (int)this->arr.size() )
+        throw TinyJsonException( "Index out of range" );
+
+    return this->arr[i];
+}
+
+Json& Json::operator[]( const std::string& key )
+{
+    if( this->jType != JsonType::OBJECT && this->jType != JsonType::UNKNOWN ){
+        throw TinyJsonException( "Invalid access: Operator[] string used on non-object type (Type is " + std::to_string((int)this->jType) + ")" );
+    }
+
+    // UNKNOWN이면 Object로 초기화
+    if( this->jType == JsonType::UNKNOWN ) {
+        this->setType( JsonType::OBJECT );
+    }
+
+    if( this->mapIndex.find( key ) == this->mapIndex.end() ) {
+        this->addObject( key, JsonNULL() );
+    }
+    return this->properties[this->mapIndex[key]].second;
+}
+
+const Json& Json::operator[]( const int i ) const
+{
+    if( this->jType != JsonType::ARRAY )
+        throw TinyJsonException( "Invalid access: Operator[] int used on non-array type" );
+
+    if( i < 0 || i >= (int)this->arr.size() )
+        throw TinyJsonException( "Index out of range" );
+
+    return this->arr[i];
+}
+
+const Json& Json::operator[]( const std::string& key ) const
+{
+    if( this->jType != JsonType::OBJECT )
+        throw TinyJsonException( "Invalid access: Operator[] string used on non-object type" );
+
+    auto it = this->mapIndex.find( key );
+    if( it == this->mapIndex.end() )
+        throw TinyJsonException( "Key not found: " + key );
+
+    return this->properties[it->second].second;
+}
+
+Json& Json::operator=( const int value )
+{
+    std::stringstream ss; ss << value;
+    this->setType( JsonType::INT ).setString( ss.str() );
+    return (*this);
+}
+
+Json& Json::operator=( const double value )
+{
+    std::stringstream ss; ss << value;
+    this->setType( JsonType::DOUBLE ).setString( ss.str() );
+    return (*this);
+}
+
+Json& Json::operator=( const std::string& value )
+{
+    if( Parser::isObject( value ) )
+        *this = Parser::parse( value );
+    else
+        this->setType( JsonType::STRING ).setString( value );
+    return (*this);
+}
+
+Json& Json::operator=( const char* value )
+{
+    return this->operator=( std::string(value) );
+}
+
+Json& Json::operator=( const bool value )
+{
+    this->setType( JsonType::BOOLEAN ).setString( value ? "true" : "false" );
+    return (*this);
+}
+
+// ======================================================================================
+// [getAs 템플릿 특수화 구현]
+// ======================================================================================
+
+// Generic 템플릿
+template <typename T>
+T Json::getAs() const
+{
+    T ret;
+    std::stringstream ss( this->strValue );
+    ss >> ret;
+    return ret;
+}
+
+template <>
+bool Json::getAs<bool>() const
+{
+    return ( this->strValue == "true" );
+}
+
+template <>
+std::string Json::getAs<std::string>() const
+{
+    return this->deserialize( this->strValue );
+}
+
+template <>
+int Json::getAs<int>() const
+{
+    try {
+        return std::stoi( this->strValue );
+    }
+    catch (...) { return 0; }
+}
+
+template <>
+double Json::getAs<double>() const
+{
+    try {
+        return std::stod( this->strValue );
+    }
+    catch (...) { return 0.0; }
+}
+
+// ======================================================================================
+// [직렬화 및 유틸리티 구현]
+// ======================================================================================
+std::string Json::deserialize( const std::string& src ) noexcept
+{
+    std::string out = "";
+
+    for( std::size_t i = 0; i < src.length(); ++i )
+    {
+        if( src[i] == '\\' && i + 1 < src.length() )
+        {
+            char next = src[i+1];
+            switch( next ) {
+                case '"':  out += '"';  break;
+                case '\\': out += '\\'; break;
+                case '/':  out += '/';  break;
+                case 'b':  out += '\b'; break;
+                case 'f':  out += '\f'; break;
+                case 'n':  out += '\n'; break;
+                case 'r':  out += '\r'; break;
+                case 't':  out += '\t'; break;
+                default:   out += next; break;
+            }
+            i++;
+        }
+        else
+        {
+            out += src[i];
+        }
+    }
+    return out;
+}
+
+std::string Json::serialize( const std::string& src ) noexcept
+{
+    std::string out = "";
+
+    for( char c : src )
+    {
+        switch( c ){
+            case '\n': out += "\\n";  break;
+            case '\t': out += "\\t";  break;
+            case '\b': out += "\\b";  break;
+            case '\r': out += "\\r";  break;
+            case '\f': out += "\\f";  break;
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            default:   out += c;      break;
+        }
+    }
+    return out;
+}
+
+void Json::setString( const std::string& s ) noexcept
+{
+    this->strValue = this->serialize( s );
+}
+
+Json& Json::setType( const JsonType type )
+{
+    this->jType = type;
+    return (*this);
+}
+
+std::size_t Json::size() const noexcept
+{
+    if( this->jType == JsonType::ARRAY )  return this->arr.size();
+    if( this->jType == JsonType::OBJECT ) return this->properties.size();
+    return 0;
+}
+
+std::vector<std::string> Json::keys() const
+{
+    std::vector<std::string> k;
+    if( this->jType == JsonType::OBJECT )
+    {
+        for( auto& pair : this->properties ){ k.push_back( pair.first ); }
+    }
+    return k;
+}
+
+Json& Json::addObject( const Json& objectValue )
+{
+    // [Case 1] 부모가 Array인 경우 -> 입력값이 무엇이든 원소로 추가 (Push)
+    if( this->jType == JsonType::ARRAY )
+    {
+        this->addElement( objectValue );
+        return (*this);
+    }
+
+    // [Case 2] 부모가 Object (혹은 UNKNOWN) 인 경우
+    // 사용자 요청 반영: 입력값이 Object라면 내부 속성들을 합친다 (Merge)
+    if( objectValue.isObject() )
+    {
+        this->setType( JsonType::OBJECT );
+
+        // 들어온 객체의 모든 속성(Properties)을 순회하며 내 안에 복사
+        // (같은 클래스이므로 private 멤버 properties에 직접 접근 가능)
+        for( const auto& prop : objectValue.properties ){
+            this->addProperty( prop.first, prop.second );
+        }
+        return (*this);
+    }
+
+    // [Exception] 부모는 Object인데, Key도 없는 단순 값(Int, String 등)을 넣으려 할 때
+    throw TinyJsonException("Cannot add a non-object value to an Object without a key.");
+}
+
+void Json::addProperty( const std::string& k, const Json& v )
+{
+    if( this->mapIndex.find( k ) != this->mapIndex.end() )
+    {
+        this->properties[this->mapIndex[k]].second = v;
+    }
+    else
+    {
+        this->mapIndex[k] = this->properties.size();
+        this->properties.emplace_back( k, v );
+    }
+}
+
+void Json::addElement( const Json& v )
+{
+    this->arr.push_back( v );
+}
+
+std::string Json::makeSpace( const unsigned int space ) const noexcept
+{
+    return std::string( space, ' ' );
+}
+
+std::string Json::toStringStrip() const noexcept
+{
     switch( this->jType )
     {
+    case JsonType::STRING:    return "\"" + this->strValue + "\"";
+    case JsonType::INT:       return strValue;
+    case JsonType::DOUBLE:    return strValue;
+    case JsonType::BOOLEAN:   return strValue;
+    case JsonType::NULL_TYPE: return "null";
+
     case JsonType::OBJECT:
-        for( auto& pair : this->properties ) {
-            keys.emplace_back( pair.first );
-        }
-        break;
-
-    default:
-        break;
-    }
-    return keys;
-}
-
-vector<JsonValue>& JsonValue::list()
-{
-    return this->arr;
-}
-
-string JsonValue::toString( ToStringType type ) noexcept
-{
-    switch( type )
     {
-    case ToStringType::Pretty:
-        return this->toStringPretty();
-    
-    default:
-    case ToStringType::Strip:
-        return this->toStringStrip();
+        std::string s = "{ ";
+        for( std::size_t i = 0; i < this->properties.size(); ++i )
+        {
+            s += "\"" + this->properties[i].first + "\": " + this->properties[i].second.toStringStrip();
+            if( i < this->properties.size() - 1 ) { s += ", "; }
+        }
+        s += " }";
+        return s;
+    }
+
+    case JsonType::ARRAY:
+    {
+        std::string s = "[ ";
+        for( std::size_t i = 0; i < this->arr.size(); ++i )
+        {
+            s += this->arr[i].toStringStrip();
+            if( i < this->arr.size() - 1 ) { s += ", "; }
+        }
+        s += " ]";
+        return s;
+    }
+    default: return "";
     }
 }
 
-const bool JsonValue::saveFile( const char* filename )
+std::string Json::toStringPretty( const unsigned int space ) const noexcept
 {
-    ofstream file(filename);
-    if( !file.is_open() ) return false;
+    switch( this->jType )
+    {
+    case JsonType::STRING:    return "\"" + this->strValue + "\"";
+    case JsonType::INT:       return strValue;
+    case JsonType::DOUBLE:    return strValue;
+    case JsonType::BOOLEAN:   return strValue;
+    case JsonType::NULL_TYPE: return "null";
+
+    case JsonType::OBJECT:
+    {
+        std::string s = "{\n";
+        for( std::size_t i = 0; i < this->properties.size(); ++i )
+        {
+            s += makeSpace( space )
+               + "\"" + this->properties[i].first + "\": "
+               + this->properties[i].second.toStringPretty( space + 2 );
+
+            if( i < this->properties.size() - 1 ) { s += ",\n"; }
+            else                                  { s += "\n";  }
+        }
+        s += makeSpace( space > 2 ? space - 2 : 0 ) + "}";
+        return s;
+    }
+
+    case JsonType::ARRAY:
+    {
+        std::string s = "[ ";
+        for( std::size_t i = 0; i < this->arr.size(); ++i )
+        {
+            s += this->arr[i].toStringPretty( space );
+            if( i < this->arr.size() - 1 ) { s += ", "; }
+        }
+        s += " ]";
+        return s;
+    }
+    default: return "";
+    }
+}
+
+std::string Json::toString( ToStringType type ) const noexcept
+{
+    return ( type == ToStringType::Pretty )
+        ? this->toStringPretty( 2 )
+        : this->toStringStrip();
+}
+
+bool Json::saveFile( const char* filename ) const
+{
+    std::ofstream file( filename );
+
+    if( !file.is_open() )
+        return false;
 
     file << this->toString( ToStringType::Pretty );
     file.close();
 
-    cout << "File save done : " << filename << endl;
     return true;
 }
 
-// About Parser ==========================================================
-const bool Parser::isObject( const string& str ) noexcept
+// ======================================================================================
+// [Parser 구현]
+// ======================================================================================
+bool Parser::isObject( const std::string& str ) noexcept
 {
-    return !(Parser::tokenize( str, false ).empty());
+    try
+    {
+        return !Parser::tokenize( str ).empty();
+    }
+    catch (...)
+    {
+        return false;
+    }
 }
 
-const bool Parser::isObject( const char* str ) noexcept
+bool Parser::isObject( const char* str ) noexcept
 {
-    return Parser::isObject( string{str} );
+    return Parser::isObject( std::string(str) );
 }
 
-inline const bool Parser::isWhiteSpace( const char c )
+inline bool Parser::isWhiteSpace( const char c )
 {
-    return isspace(c);
+    return isspace( c );
 }
 
-const int Parser::nextWhiteSpace( const string& src, const int startPos ) noexcept
+int Parser::nextWhiteSpace( const std::string& src, const int startPos ) noexcept
 {
-    int i = startPos;
-    const int len = static_cast<int>( src.length() );
+    int       i   = startPos;
+    const int len = (int)src.length();
 
-    while( i < len ) {
-        if( src[i] == '"' ) {
+    while( i < len )
+    {
+        if( src[i] == '"' )
+        {
             ++i;
-            while( i < len && ( src[i] != '"' || src[i-1] == '\\' ) ) ++i;
+            while( i < len && ( src[i] != '"' || src[i-1] == '\\' ) ) { ++i; }
         }
-        if( src[i] == '\'' ) {
+        if( src[i] == '\'' )
+        {
             ++i;
-            while( i < len && ( src[i] != '\'' || src[i-1] == '\\' ) ) ++i;
+            while( i < len && ( src[i] != '\'' || src[i-1] == '\\' ) ) { ++i; }
         }
-        if( isWhiteSpace( src[i] ) ) return i;
+
+        if( isWhiteSpace( src[i] ) ) { return i; }
         ++i;
     }
     return len;
 }
 
-const int Parser::skipWhiteSpaces( const string& src, const int pos ) noexcept
+int Parser::skipWhiteSpaces( const std::string& src, const int pos ) noexcept
 {
-    int i = pos;
-    const int len = static_cast<int>( src.length() );
+    int       i   = pos;
+    const int len = (int)src.length();
 
-    while( i < len ) {
-        if( !isWhiteSpace( src[i] ) ) return i;
+    while( i < len )
+    {
+        if( !isWhiteSpace( src[i] ) ) { return i; }
         ++i;
     }
+
     return -1;
 }
 
-vector<Parser::Token> Parser::tokenize( const string& src, const bool validation_on = true )
+std::vector<Parser::Token> Parser::tokenize( const std::string& src )
 {
-    string source(src);
-    vector<Token> tokens;
+    std::vector<Token> tokens;
+    int idx = Parser::skipWhiteSpaces( src, 0 );
 
-    // Check brackets pair
-    static int check_cbrace  = 0;
-    static int check_bracket = 0;
+    int check_brace   = 0;
+    int check_bracket = 0;
 
-    int idx = Parser::skipWhiteSpaces( source, 0 );
-    while( idx >= 0 ) {
-        const int    next = Parser::nextWhiteSpace( source, idx );
-        string       str  = source.substr( idx, next - idx );
-        const size_t len  = str.length();
+    while( idx >= 0 )
+    {
+        int next = Parser::nextWhiteSpace( src, idx );
 
-        size_t k = 0;
-        while( k < len ) {
-            if( str[k] == '"' ) {
-                size_t tmp_k = k+1;
-                while( tmp_k < len && ( str[tmp_k] != '"' || str[tmp_k-1] == '\\' ) ) ++tmp_k;
-                tokens.emplace_back( str.substr( k+1, tmp_k-k-1), TokenType::STRING );
-                k = tmp_k+1;
-                continue;
+        std::string str = src.substr( idx, next - idx );
+        std::size_t len = str.length();
+        std::size_t k   = 0;
+
+        while( k < len )
+        {
+            char c = str[k];
+            if( c == '"' )
+            {
+                std::size_t tmp = k + 1;
+
+                while( tmp < len && ( str[tmp] != '"' || str[tmp-1] == '\\' ) )
+                {
+                    ++tmp;
+                }
+
+                tokens.emplace_back( str.substr( k + 1, tmp - k - 1 ), TokenType::STRING );
+                k = tmp + 1;
             }
-            else if( str[k] == '\'' ) {
-                size_t tmp_k = k+1;
-                while( tmp_k < len && ( str[tmp_k] != '\'' || str[tmp_k-1] == '\\' ) ) ++tmp_k;
-                tokens.emplace_back( str.substr( k+1, tmp_k-k-1 ), TokenType::STRING );
-                k = tmp_k+1;
-                continue;                
-            }
-            else if( str[k] == ',' ) {
-                tokens.emplace_back( ",", TokenType::COMMNA );
+            else if( c == ',' )
+            {
+                tokens.emplace_back( ",", TokenType::COMMA );
                 ++k;
-                continue;
             }
-            else if( str[k] == 't' && k+3 < len && str.substr( k, 4 ) == "true" ) {
-                tokens.emplace_back( "true", TokenType::BOOLEAN );
-                k += 4;
-                continue;
-            }
-            else if( str[k] == 'f' && k+4 < len && str.substr( k, 5 ) == "false" ) {
-                tokens.emplace_back( "false", TokenType::BOOLEAN );
-                k += 5;
-                continue;                
-            }
-            else if( str[k] == 'n' && k+3 < len && str.substr( k, 4 ) == "null" ) {
-                tokens.emplace_back( "null", TokenType::NULL_TYPE );
-                k += 4;
-                continue;
-            }
-            else if( str[k] == '{' ) {
+            else if( c == '{' )
+            {
                 tokens.emplace_back( "{", TokenType::CBRACE_OPEN );
-                ++k;
-                ++check_cbrace;
-                continue;
+                ++k; ++check_brace;
             }
-            else if( str[k] == '}' ) {
+            else if( c == '}' )
+            {
                 tokens.emplace_back( "}", TokenType::CBRACE_CLOSE );
-                ++k;
-                --check_cbrace;
-                continue;
+                ++k; --check_brace;
             }
-            else if( str[k] == '[' ) {
+            else if( c == '[' )
+            {
                 tokens.emplace_back( "[", TokenType::BRACKET_OPEN );
-                ++k;
-                check_bracket++;
-                continue;
+                ++k; ++check_bracket;
             }
-            else if( str[k] == ']' ) {
+            else if( c == ']' )
+            {
                 tokens.emplace_back( "]", TokenType::BRACKET_CLOSE );
-                ++k;
-                check_bracket--;
-                continue;
+                ++k; --check_bracket;
             }
-            else if( str[k] == ':' ) {
+            else if( c == ':' )
+            {
                 tokens.emplace_back( ":", TokenType::COLON );
                 ++k;
-                continue;
             }
-            else if( str[k] == '-' || ( str[k] <= '9' && str[k] >= '0' ) ) {
-                size_t tmp_k = k;
-                if( str[tmp_k] == '-' ) ++tmp_k;
+            else if( c == 't' && k + 3 < len && str.substr( k, 4 ) == "true" )
+            {
+                tokens.emplace_back( "true", TokenType::BOOLEAN );
+                k += 4;
+            }
+            else if( c == 'f' && k + 4 < len && str.substr( k, 5 ) == "false" )
+            {
+                tokens.emplace_back( "false", TokenType::BOOLEAN );
+                k += 5;
+            }
+            else if( c == 'n' && k + 3 < len && str.substr( k, 4 ) == "null" )
+            {
+                tokens.emplace_back( "null", TokenType::NULL_TYPE );
+                k += 4;
+            }
+            else if( c == '-' || ( c >= '0' && c <= '9' ) )
+            {
+                std::size_t tmp = k;
+                if( str[tmp] == '-' ) { ++tmp; }
 
-                TokenType currentType = TokenType::INT;
-                while( tmp_k < len && ( ( str[tmp_k] <= '9' && str[tmp_k] >= '0' ) || str[tmp_k] == '.' ) ) {
-                    if( str[tmp_k] == '.' ) currentType = TokenType::DOUBLE;
-                    ++tmp_k;
+                TokenType type = TokenType::INT;
+                while( tmp < len && ( ( str[tmp] >= '0' && str[tmp] <= '9' ) || str[tmp] == '.' ) )
+                {
+                    if( str[tmp] == '.' ) { type = TokenType::DOUBLE; }
+                    ++tmp;
                 }
-                tokens.emplace_back( str.substr( k, tmp_k-k ), currentType );
-                k = tmp_k;
-                continue;
+
+                tokens.emplace_back( str.substr( k, tmp - k ), type );
+                k = tmp;
             }
-            // else
-            tokens.emplace_back( str.substr( k ), TokenType::UNKNOWN );
-            k = len;
-        } // while( k < len )
-        idx = Parser::skipWhiteSpaces( source, next );
+            else
+            {
+                ++k;
+            }
+        }
+        idx = Parser::skipWhiteSpaces( src, next );
     }
 
-    // simple bracket pair validation
-    if( validation_on ) {
-        assert( check_bracket == 0 && "Mismatched pairs of [ , ]" );
-        assert( check_cbrace  == 0 && "Mismatched pairs of { , }" );
-    }
+    if( check_brace != 0 || check_bracket != 0 )
+        throw TinyJsonException( "Mismatched brackets or braces in JSON" );
 
-    if( check_bracket != 0 || check_cbrace != 0 )
-        return vector<Parser::Token> {};
     return tokens;
 }
 
-JsonValue Parser::jsonParse( const vector<Token>& v, int& curPos, const bool validation_on )
- {
-    JsonValue current = JsonObject().setType( JsonType::UNKNOWN );
+Json Parser::jsonParse( const std::vector<Token>& v, int& curPos )
+{
+    if( curPos >= (int)v.size() )
+        return JsonNULL();
 
-    if( v.empty() && curPos == 0 )
-        return current;
+    Token token = v[curPos];
+    Json  current( JsonType::UNKNOWN );
 
-    const int i = curPos;
-    const TokenType tokenType = v[i].type;
-
-    static stack<TokenType> bracket_check {};
-
-    switch( tokenType )
-    {
-    case TokenType::CBRACE_OPEN:
+    if( token.type == TokenType::CBRACE_OPEN )
     {
         current.setType( JsonType::OBJECT );
-        bracket_check.push( TokenType::CBRACE_OPEN );
 
-        int k = i+1;
-        while( v[k].type != TokenType::CBRACE_CLOSE ) {
-            string key = v[k].value;
+        int k = curPos + 1;
 
-            k += 2; // k+1 should be ':'
-            JsonValue object = Parser::jsonParse( v, k );
-            current.addProperty( key, object );
+        while( k < (int)v.size() && v[k].type != TokenType::CBRACE_CLOSE )
+        {
+            std::string key = v[k].value;
 
-            if( v[k].type == TokenType::COMMNA ) 
-                ++k;
+            if( v[k+1].type != TokenType::COLON )
+                throw TinyJsonException( "Expected ':' after key in object" );
+
+            int nextPos = k + 2;
+
+            Json val = Parser::jsonParse( v, nextPos );
+
+            current.addProperty( key, val );
+            k = nextPos;
+
+            if( k < (int)v.size() )
+            {
+                // 콤마가 있으면 다음 요소로 진행
+                if( v[k].type == TokenType::COMMA )
+                {
+                    ++k;
+                }
+                // 닫는 괄호면 루프 종료 (while 조건에서 처리됨)
+                else if( v[k].type == TokenType::CBRACE_CLOSE )
+                {
+                    continue;
+                }
+                // 콤마도 아니고 닫는 괄호도 아니면 문법 오류!
+                else
+                {
+                    throw TinyJsonException( "Expected ',' or '}' after property in object" );
+                }
+            }
         }
-
-        TokenType check = bracket_check.top(); 
-        bracket_check.pop();
-
-        if( validation_on )
-            assert( check == TokenType::CBRACE_OPEN && "Parenthesis Ordered Pair Validation Error Occurred" );
-
-        curPos = k+1;
-        break;
+        curPos = k + 1;
     }
-
-    case TokenType::BRACKET_OPEN:
+    else if( token.type == TokenType::BRACKET_OPEN )
     {
         current.setType( JsonType::ARRAY );
-        bracket_check.push(TokenType::BRACKET_OPEN);
-        
-        int k = i+1;
-        while( v[k].type != TokenType::BRACKET_CLOSE ) {
-            JsonValue element = Parser::jsonParse( v, k );
-            current.addElement( element );
 
-            if( v[k].type == TokenType::COMMNA )
-                ++k;
+        int k = curPos + 1;
+
+        while( k < (int)v.size() && v[k].type != TokenType::BRACKET_CLOSE )
+        {
+            int  nextPos = k;
+            Json val     = Parser::jsonParse( v, nextPos );
+
+            current.addElement( val );
+            k = nextPos;
+
+            if( k < (int)v.size() && v[k].type == TokenType::COMMA ) { ++k; }
         }
-
-        TokenType check = bracket_check.top(); 
-        bracket_check.pop();
-
-        if( validation_on )
-            assert( check == TokenType::BRACKET_OPEN && "Parenthesis Ordered Pair Validation Error Occurred" );
-
-        curPos = k+1;
-        break;
+        curPos = k + 1;
     }
-
-    case TokenType::INT:
-    {
-        current.setType( JsonType::INT ).setString( v[i].value );
-        curPos = i+1;
-        break;
-    }
-
-    case TokenType::DOUBLE:
-    {
-        current.setType( JsonType::DOUBLE ).setString( v[i].value );
-        curPos = i+1;
-        break;
-    }
-
-    case TokenType::STRING:
-    {
-        current.setType( JsonType::STRING ).setString( v[i].value );
-        curPos = i+1;
-        break;
-    }
-
-    case TokenType::BOOLEAN:
-    {
-        current.setType( JsonType::BOOLEAN ).setString( v[i].value );
-        curPos = i+1;
-        break;
-    }
-
-    case TokenType::NULL_TYPE:
-    {
-        current.setType( JsonType::NULL_TYPE ).setString( v[i].value );
-        curPos = i+1;
-        break;
-    }
-
-    default:
-        break;
-    }
-
-    if( validation_on )
-        assert( ( (int)v.size() != curPos || bracket_check.empty() ) && "Parenthesis Ordered Pair Validation Error Occurred Last" );
     else
-        while( !bracket_check.empty() ) bracket_check.pop();
+    {
+        switch( token.type )
+        {
+        // setString()은 내부적으로 serialize()를 호출하므로 이중 이스케이프가 발생함.
+        // 토큰 값은 이미 포맷팅된 문자열이므로 strValue에 직접 대입해야 함.
+        case TokenType::STRING:
+            current.setType( JsonType::STRING );
+            current.strValue = token.value;
+            break;
 
+        case TokenType::INT:
+            current.setType( JsonType::INT ).setString( token.value );
+            break;
+
+        case TokenType::DOUBLE:
+            current.setType( JsonType::DOUBLE ).setString( token.value );
+            break;
+
+        case TokenType::BOOLEAN:
+            current.setType( JsonType::BOOLEAN ).setString( token.value );
+            break;
+
+        case TokenType::NULL_TYPE:
+            current.setType( JsonType::NULL_TYPE ).setString( "null" );
+            break;
+
+        default:
+            break;
+        }
+        curPos++;
+    }
     return current;
 }
 
-JsonValue Parser::parse( const char* str, const bool valid_on = true )
+Json Parser::parse( const char* str )
 {
-    int startPos = 0;
-    return Parser::jsonParse( tokenize( string{str}, valid_on ), startPos, valid_on );
+    return Parser::parse( std::string(str) );
 }
 
-JsonValue Parser::parse( const string& str, const bool valid_on = true )
+Json Parser::parse( const std::string& str )
 {
-    int startPos = 0;
-    return Parser::jsonParse( tokenize( str, valid_on ), startPos, valid_on );
-}
+    try
+    {
+        std::vector<Token> tokens = Parser::tokenize( str );
 
-JsonValue Parser::parseFile( const string& fileName )
-{
-    ifstream ifs( fileName.c_str() );
+        if( tokens.empty() )
+            return JsonNULL();
 
-    if( !ifs.good() ) {
-        cout << "file read failed." << endl;
-        return JsonObject();
+        int pos = 0;
+        return Parser::jsonParse( tokens, pos );
     }
-
-    string str {};
-    string tmp {};
-
-    while( getline( ifs, tmp ) ) 
-        str += tmp;
-
-    ifs.close();
-
-    return Parser::parse( str );
+    catch ( const std::exception& e )
+    {
+        throw TinyJsonException( std::string("Parse Error: ") + e.what() );
+    }
 }
 
-}; // nsp:TinyJson
+Json Parser::parseFile( const std::string& fileName )
+{
+    std::ifstream ifs( fileName );
+    if( !ifs.is_open() )
+        throw TinyJsonException( "File open failed: " + fileName );
+
+    std::stringstream buffer;
+    buffer << ifs.rdbuf();
+    return Parser::parse( buffer.str() );
+}
+
+} // namespace TinyJson

@@ -1,5 +1,10 @@
 [Bb]uild
 [Rr]un[Ff]ile
+
 TinyJsonExample
+unit_tests
+
 .vscode
-data/test*
+
+data/test_json_to_file_echo.json
+data/output_test.json

@@ -2,623 +2,203 @@
 
 <p align="center"><img src="./asset/TinyJson.png"></p>
 
-## C++를 이용한 간단하고 강력한 JSON Parser ( Reference by [jute](https://github.com/amir-s/jute) )  
+## C++를 이용한 간단하고 강력한 JSON Parser
 
-- **단 두 개의 코드 파일**만으로 작동합니다. ( `TinyJson.h`, `TinyJson.cpp` )  
-- 각 파일은 **1000줄 미만의 코드**로 구성되어 있습니다. 코드를 분석해 보세요!  
-- 아래는 [jute](https://github.com/amir-s/jute)의 원본 JSON parser에서 개선된 사항입니다.  
+- **Reference**: [jute](https://github.com/amir-s/jute)
+- **단 두 개의 1000줄 미만의 코드 파일**로 작동합니다. ( `TinyJson.h`, `TinyJson.cpp` )
+- 외부 의존성이 전혀 없는 **C++14** 표준 준수 라이브러리입니다.
+- **[nlohmann/json](https://github.com/nlohmann/json)** 스타일의 직관적인 문법을 지향합니다.
 
-> * [x] [Add] Catch2 v3.5.0을 이용한 **단위 테스트(Unit Tests)** 도입  
-> * [x] [Add] **CMake** 빌드 시스템 지원 및 예시 제공  
-> * [x] [Add] 엄격한 파싱 및 유효성 검사 로직 추가  
-> * [x] [Add] Json 데이터를 파일로 저장  
-> * [x] [Add] 정수와 실수 타입 구분  
-> * [x] [Add] 유효하지 않은 키/인덱스 참조 또는 파싱 오류 시 예외 처리 (`TinyJsonException`)  
-> * [x] [Add] 직관적인 코드 작성 문법 지원 ( `json["key"] = value` )  
-> * [x] [Add] **Range-based for loop** 지원 ( e.g. `for( auto& object : json )` )  
+### 주요 개선 사항 (Refactored Features)
 
----
-
-## 개발 환경
-
-* `Linux`, `Windows`, `macOS` 환경 지원
-* **`C++14`** 필수
-* `CMake` 사용 (권장, v3.14 이상)
-* **<u>외부 라이브러리 의존성 없음</u>** (단위 테스트 실행 시에만 CPM을 통해 Catch2를 자동으로 가져옵니다)
+> * [x] **Simple Use**: 직관적인 JSON 작성 문법 지원 ( `json["key"] = value` )
+> * [x] **Iterator 지원**: 표준 `begin()/end()` 및 `range-based for` 문법 완벽 지원
+> * [x] **Key-Value 순회**: `.items()` 메서드를 통한 nlohmann 스타일의 `{key, value}` 순회 지원
+> * [x] **Method Chaining**: `addObject`, `addElementToArray`를 이용한 유려한 객체 생성
+> * [x] **Strict Parsing**: 엄격한 파싱 및 유효성 검사 로직 적용
+> * [x] **Type Safety**: `tryGetAs<T>()`를 통한 안전한 타입 변환
+> * [x] **Smart Keys**: 배열 순회 시 인덱스를 자동으로 Key(숫자/문자열)로 변환
+> * [x] **Exception**: 파싱 오류 및 잘못된 접근 시 `TinyJsonException` 발생
+> * [x] **Unit Tests**: Catch2 v3.5.0 기반의 100% 커버리지 테스트 코드 제공
 
 ---
 
-## 다른 프로젝트에 `TinyJson`을 가져가 사용하는 방법
+## 개발 환경 및 빌드
 
-- **필요 파일** : `TinyJson.h`, `TinyJson.cpp`
-- 두 파일을 프로젝트 내 적절한 위치에 복사 후 `#include "TinyJson.h"`
+* **Language**: `C++14` 이상
+* **Build System**: `CMake` (v3.14 이상 권장) 혹은 기본 `g++`
+* **Dependencies**: **없음** (단위 테스트 실행 시에만 `CPM`을 통해 `Catch2` 자동 다운로드)
 
----
+### 프로젝트 가져오기
 
-## 예제 코드 및 단위 테스트 실행 방법
+`include/TinyJson.h`와 `src/TinyJson.cpp` 두 파일만 프로젝트에 복사하여 사용하면 됩니다.
 
-### 방법 1. `CMake` 사용한 예제 및 단위 테스트 빌드
+### 예제 및 테스트 빌드 방법
 
-> **1. [설정]** `mkdir build && cd build && cmake ..`  
-> **2. [빌드]** `cmake --build .`  
-> **3. [단위 테스트 실행]** `./unit_tests`  
-> **4. [예제 코드 실행]** `./TinyJsonExample` (프로젝트 루트 경로에 실행 파일이 생성됩니다)  
+```bash
+# 1. 빌드 디렉토리 생성 및 이동
+mkdir build && cd build
 
-### 방법 2. `g++` 사용한 예제 코드 수동 컴파일
+# 2. CMake 설정
+cmake ..
 
-> **1. [컴파일]** `g++ -o runFile -I./include src/TinyJson.cpp main.cpp`  
-> **2. [예제 코드 실행]** `./runFile`
+# 3. 빌드 (라이브러리, 예제, 테스트 코드 모두 빌드됨)
+cmake --build .
 
----
+# 4. 단위 테스트 실행
+./unit_tests
 
-## 참고 사항
+# 5. 예제 코드 실행 (프로젝트 루트 폴더에 생성됨)
+./TinyJsonExample
 
-- **적절한 오류 검사가 구현되어 있습니다.** 파서는 입력된 JSON 형식이 유효하지 않거나 잘못된 접근( 예: const 객체에서 존재하지 않는 키에 접근, 배열 인덱스 초과 등 )이 발생할 경우 `TinyJson::TinyJsonException` 예외를 던집니다. 따라서 `try-catch` 블록을 사용하여 예외를 처리하는 것을 권장합니다.  
+# 만약 CMake를 사용하지 않고 g++ 명령어만 이용해서 컴파일 하고 싶다면 아래 명령어 입력
+# g++ -o TinyJsonExample -I./include src/TinyJson.cpp main.cpp
 
-- 해당 프로젝트는 **최대한 단순하게 C++ JSON Parser 구현을 연습해보기 위한 샘플 코드 프로젝트**입니다. 만약 실제 업무에 사용 등 더 엄밀한 JSON Parser가 필요하다면, **[nlohmann/json](https://github.com/nlohmann/json)** 을 사용하세요. 해당 코드는 **단일 헤더 파일**로 구현되어 있으며, 사실상 실무 환경에서 업계 표준입니다. 하지만 **25000줄 이상의 코드 라인**을 가집니다.
+```
 
 ---
 
 ## HOW TO USE (사용법)
 
-> **01.** [Json 로드 및 파싱](#1-load-and-parse-json)  
-> **02.** [키를 사용하여 값 가져오기 : Object](#2-get-value-from-key--object)  
-> **03.** [안전하게 값 가져오기 : tryGetAs<T>()](#3-trygetas)  
-> **04.** [인덱스를 사용하여 값 가져오기 : Array](#4-get-value-from-index--array)  
-> **05.** [값 타입 확인](#5-check-value-type)  
-> **06.** [새로운 값 설정](#6-set-new-value)  
-> **07.** [값 교체하기](#7-replace-value)  
-> **08.** [값 교체하기 2 (타입 변경)](#8-replace-value-2)  
-> **09.** [Json 객체 만들기 : 단순형](#9-make-json-object--simple)  
-> **10.** [Json 객체 만들기 : 복합형](#10-make-json-object--complex)  
-> **11.** [Json 객체 만들기 : 간편한 방법](#11-make-json-object--easy-way)  
-> **12.** [파일로 저장](#12-file-save)  
-> **13.** [키 목록 가져오기 및 순회(Iteration)](#13-get-keys-or-iteration)  
+### 1. JSON 로드 및 파싱 (Load & Parse)
 
----
+파일 경로 또는 문자열로부터 JSON을 파싱합니다.
 
-### 1. Load and Parse Json
-
-* [ 예제 Json 파일 ] **[Data.json](https://www.google.com/search?q=./data/Data.json)**
-
-```c++
-// main.cpp
-#include <iostream>
+```cpp
 #include "TinyJson.h"
-
-using namespace std;
 using namespace TinyJson;
 
-int main( void )
-{
-    try {
-        // 대상 json 파일을 파싱합니다.
-        // 실패 시 TinyJsonException을 던집니다.
-        Json js = Parser::parseFile( "data/Data.json" );
-
-        // 콘솔에 출력합니다.
-        cout << js.toString(ToStringType::Pretty) << endl;
-    }
-    catch( const TinyJsonException& e ) {
-        cerr << e.what() << endl;
-    }
-
-    return 0;
-}
-
-```
-
-<details>
-<summary> 결과 (Result) </summary>
-
-```shell
-# Console Stdout
-{
- "repo_name": "TinyJson",
- "examples": [ {
-   "author": "so686so",
-   "name": "SoByungJun",
-   "attr": [ {
-     "key": "link",
-     "value": "http://github.com/so686so/TinyJson"
-    }, {
-     "key": "target",
-     "value": "_everyone_"
-    } ]
-  }, {
-   "this_is": [ "array", "of", "strings" ],
-   "number_array": [ 1, 2, 4, 8, 16 ],
-   "pie": 3.14159,
-   "boolean": true,
-   "bug": null,
-   "mixed": [ 1, 2, {
-     "arg_1": -100.12345,
-     "arg_2": false
-    }, null, 0.17171771, true, [ "this", [ "in_array is", true ] ], "end list!" ]
-  }, {
-   "test_json": true
-  }, {
-   "control_chars": "hellow \\n worlds! \nice to meet you:tab:\tEND\bS\n"
-  } ],
- "thanks": "amir-s",
- "reference_by": "https://github.com/amir-s/jute",
- "life": {
-  "mean": {
-   "is": 42
-  }
- }
-}
-
-```
-
-</details>
-
-### 2. Get value from key : object
-
-```c++
-int main( void )
-{
+try {
+    // 파일에서 로드
     Json js = Parser::parseFile( "data/Data.json" );
+    
+    // 문자열에서 로드
+    Json jsStr = Parser::parse( "{\"key\": \"value\"}" );
 
-    // 사용법: 'std::string value = js["repo_name"].getAs<string>();'
-    auto repo = js["repo_name"].getAs<string>();
-
-    cout << "key: repo_name, value: " << repo << endl;
-
-    cout << js["thanks"].getAs<string>() << ", "
-         << js["life"]["mean"]["is"].getAs<int>() << endl;
-
-    return 0;
+    // 출력 (Pretty Print)
+    std::cout << js.toString( ToStringType::Pretty ) << std::endl;
+}
+catch( const TinyJsonException& e ) {
+    std::cerr << e.what() << std::endl;
 }
 
 ```
 
-<details>
-<summary> 결과 (Result) </summary>
+### 2. 값 접근 및 타입 변환 (Access & Casting)
 
-```shell
-# Console Stdout
-key: repo_name, value: TinyJson
-amir-s, 42
-
-```
-
-</details>
-
-### 3. tryGetAs<T>()
+`[]` 연산자를 사용해 접근하며, `getAs<T>()`로 값을 변환합니다.
 
 ```cpp
-int main( void )
-{
-    Json js = Parser::parseFile( "data/Data.json" );
+// Object 접근
+std::string name = js["project"]["name"].getAs<std::string>();
 
-    // 사용법: if( {value}.tryGetAs<T>( T& ref ) )
-    // tryGetAs 결과가 true이면, ref 변수를 통해 값을 얻을 수 있습니다.
-    int refInt = 0;
-    if( ( js["repo_name"] ).tryGetAs<int>( refInt ) )
-        cout << "try get success, value(int): " << refInt << endl;
-    else
-        cout << "try get failed, [\"repo_name\"] value is not int" << endl;
+// Array 접근
+int version = js["versions"][0].getAs<int>();
 
-    string refStr = "";
-    if( ( js["repo_name"] ).tryGetAs<string>( refStr ) )
-        cout << "try get success, value(str): " << refStr << endl;
-    else
-        cout << "try get failed, [\"repo_name\"] value is not string" << endl;
-
-    return 0;
+// 타입 확인
+if ( js["active"].isBool() ) {
+    bool isActive = js["active"].getAs<bool>();
 }
 
 ```
 
-<details>
-<summary> 결과 (Result) </summary>
+### 3. 안전한 값 가져오기 (Safe Access)
 
-```shell
-# Console Stdout
-try get failed, ["repo_name"] value is not int
-try get success, value(str): TinyJson
-
-```
-
-</details>
-
-### 4. Get value from index : array
+키가 존재하는지, 타입이 맞는지 확실하지 않을 때는 `tryGetAs`를 사용하세요.
 
 ```cpp
-int main( void )
-{
-    Json js = Parser::parseFile( "data/Data.json" );
+int refVal = 0;
 
-    auto bool_value = js["examples"][1]["boolean"].getAs<bool>();
-    if( bool_value == true ) {
-        cout << "number is " << js["examples"][1]["number_array"][3].getAs<int>() << endl;
-        cout << "pie value " << js["examples"][1]["pie"].getAs<double>() << endl;
-    }
-
-    return 0;
+// 성공 시 true 반환 및 refVal에 값 할당
+if ( js["count"].tryGetAs<int>( refVal ) ) {
+    std::cout << "Count: " << refVal << std::endl;
+} else {
+    std::cout << "값이 없거나 정수 타입이 아닙니다." << std::endl;
 }
 
 ```
 
-<details>
-<summary> 결과 (Result) </summary>
+### 4. JSON 객체/배열 생성 (Construction & Chaining)
 
-```shell
-# Console Stdout
-number is 8
-pie value 3.14159
-
-```
-
-</details>
-
-### 5. Check value type
+메서드 체이닝을 통해 복잡한 JSON 구조를 한 번에 생성할 수 있습니다.
 
 ```cpp
-int main( void )
-{
-    Json js = Parser::parseFile( "data/Data.json" );
-    // Json 데이터의 일부(subset)를 가져옵니다.
-    Json jsChild = js["examples"][1]["mixed"];
+// Object 생성
+Json myObj = JsonObject();
+myObj.addObject( "name", "TinyJson" )
+     .addObject( "version", 2.5 )
+     .addObject( "meta", JsonObject( "author", "Tom" ) );
 
-    cout << "isInt?    true  == " << boolalpha << jsChild[0].isInt()    << endl; // 1
-    cout << "isInt?    false == " << boolalpha << jsChild[2].isInt()    << endl; // Object
-    cout << "isDouble? true  == " << boolalpha << jsChild[4].isDouble() << endl; // 0.17171771
-    cout << "isDouble? false == " << boolalpha << jsChild[0].isDouble() << endl; // 1
-    cout << "isBool?   true  == " << boolalpha << jsChild[5].isBool()   << endl; // true
-    cout << "isBool?   false == " << boolalpha << jsChild[3].isBool()   << endl; // null
-    cout << "isString? true  == " << boolalpha << jsChild[7].isString() << endl; // "end list!"
-    cout << "isObject? true  == " << boolalpha << jsChild[2].isObject() << endl; // object
-    cout << "isArray?  true  == " << boolalpha << jsChild[6].isArray()  << endl; // array
-    cout << "isNull?   true  == " << boolalpha << jsChild[3].isNull()   << endl; // null
+// 혹은 더 직관적인 방법으로도 생성 가능
+myObj["name_simple"]    = "TinyJson_2";
+myObj["version_simple"] = 2.5;
+myObj["meta_simple"]    = JsonObject( "author", "Jude" );
 
-    return 0;
-}
+// Array 생성 (Mixed Types)
+Json myArr = JsonArray();
+myArr.addElementToArray( 1, 2, 3 )          // 가변 인자 지원
+     .addElementToArray( "Start", "End" )
+     .addObject( "nested", "object" );      // 배열 안에 객체 삽입 자동 처리
 
 ```
 
-<details>
-<summary> 결과 (Result) </summary>
+### 5. 반복문 순회 (Iteration)
 
-```shell
-# Console Stdout
-isInt?    true  == true
-isInt?    false == false
-isDouble? true  == true
-isDouble? false == false
-isBool?   true  == true
-isBool?   false == false
-isString? true  == true
-isObject? true  == true
-isArray?  true  == true
-isNull?   true  == true
-
-```
-
-</details>
-
-### 6. Set new value
+**A. 일반 순회 (값만 필요할 때)**
+`nlohmann/json`과 동일하게 값(Value)의 참조만 순회합니다.
 
 ```cpp
-int main( void )
-{
-    Json js = Parser::parseFile( "data/Data.json" );
+Json numbers = JsonArray( 10, 20, 30 );
 
-    // js["NotYet"]은 아직 설정되지 않았습니다.
-    cout << js["NotYet"].toString() << ", isNull: " << boolalpha << js["NotYet"].isNull() << endl;
-
-    // 간단하게 값을 추가합니다.
-    js["NotYet"] = "Hello World!";
-    cout << js.toString() << endl;
-
-    return 0;
+// val은 Json& 타입입니다.
+for ( auto& val : numbers ) {
+    val = val.getAs<int>() + 1; // 원본 값 수정 가능 (11, 21, 31)
 }
 
 ```
 
-<details>
-<summary> 결과 (Result) </summary>
-
-```shell
-# Console Stdout
-null, isNull: true
-{
- ...
- "NotYet": "Hello World!"
-}
-
-```
-
-</details>
-
-### 7. Replace value
+**B. items() 순회 (키와 값이 모두 필요할 때)**
+`.key()`와 `.value()`를 제공하는 프록시 객체를 반환합니다.
 
 ```cpp
-int main( void )
-{
-    Json js = Parser::parseFile( "data/Data.json" );
-    // 42
-    cout << "Before(int): " << js["life"]["mean"]["is"].getAs<int>() << endl;
+Json obj = JsonObject( "A", 1 ).addObject( "B", 2 );
 
-    // 기존과 다른 타입의 값으로도 교체가 가능합니다.
-    js["life"]["mean"]["is"] = "The reason for living isn't just coding...";
+for ( auto item : obj.items() ) {
+    std::cout << "Key: " << item.key() << ", Val: " << item.value().getAs<int>() << std::endl;
+}
 
-    // 조건문에 진입하지 않습니다.
-    if( js["life"]["mean"]["is"].isInt() )
-        cout << "After(int):  " << js["life"]["mean"]["is"].getAs<int>() << endl;
-
-    // 조건문에 진입합니다 : 타입이 string으로 변경되었습니다!
-    if( js["life"]["mean"]["is"].isString() )
-        cout << "After(str):  " << js["life"]["mean"]["is"].getAs<string>() << endl;
-
-    return 0;
+// 배열에서 items()를 사용하면 key()는 '인덱스'가 됩니다.
+Json arr = JsonArray( 100, 200 );
+for ( auto item : arr.items() ) {
+    size_t idx = item.key(); // 자동으로 숫자로 변환됨!
+    std::cout << "Index [" << idx << "] = " << item.value().getAs<int>() << std::endl;
 }
 
 ```
 
-<details>
-<summary> 결과 (Result) </summary>
-
-```shell
-# Console Stdout
-Before(int): 42
-After(str):  The reason for living isn't just coding...
-
-```
-
-</details>
-
-### 8. Replace value 2
+### 6. 수정 및 저장 (Modify & Save)
 
 ```cpp
-int main( void )
-{
-    Json js = Parser::parseFile( "data/Data.json" );
+// 값 수정
+js["repo_name"] = "TinyJson-Refactored";
 
-    // Object 값으로 변경
-    js["life"]["mean"]["is"] = JsonObject("Language", "C++");
-    // 보기 좋게 출력 (pretty print)
-    cout << js["life"]["mean"]["is"].toString() << endl;
-
-    // null 값으로 변경
-    js["life"]["mean"]["is"] = JsonNULL();
-    // 보기 좋게 출력
-    cout << js["life"]["mean"]["is"].toString() << endl;
-
-    // Array 값으로 변경
-    js["life"]["mean"]["is"] = JsonArray(1, JsonNULL(), true, -3.5, "ABC");
-    // 보기 좋게 출력
-    cout << js["life"]["mean"]["is"].toString() << endl;
-
-    return 0;
+// 파일로 저장
+if ( js.saveFile( "output.json" ) ) {
+    std::cout << "저장 완료" << std::endl;
 }
 
 ```
-
-<details>
-<summary> 결과 (Result) </summary>
-
-```shell
-# Console Stdout
-{
- "Language": "C++"
-}
-null
-[ 1, null, true, -3.5, "ABC" ]
-
-```
-
-</details>
-
-### 9. Make json object : simple
-
-```cpp
-int main( void )
-{
-    // Json 포맷을 생성하면서 직접 key:value를 삽입합니다.
-    Json jsSmp = JsonObject("Key", "value");
-    // 보기 좋게 출력
-    cout << jsSmp.toString() << endl;
-
-    return 0;
-}
-
-```
-
-<details>
-<summary> 결과 (Result) </summary>
-
-```shell
-# Console Stdout
-{
- "Key": "value"
-}
-
-```
-
-</details>
-
-### 10. Make json object : complex
-
-```cpp
-int main( void )
-{
-    // 빈 json 포맷을 만듭니다.
-    Json jsCpx = JsonObject();
-
-    // 체인 메서드를 사용하여 데이터를 삽입합니다.
-    jsCpx.addObject( "First",  1 )
-         .addObject( "Second", 4.56 )
-         .addObject( "Array",  JsonArray ( "1", 3.45, "Test", true ) )
-         .addObject( "Child",  JsonObject( "ch1", 11 )
-                              .addObject ( "ch2", 22 )
-                              .addObject ( "GrandChild", JsonArray( "1", 3.45, "Test", true ) ) )
-         .addObject( "Third",  JsonNULL() )
-         .addObject( "Last",   false );
-
-    // 보기 좋게 출력
-    cout << jsCpx.toString(ToStringType::Pretty) << endl;
-
-    return 0;
-}
-
-```
-
-<details>
-<summary> 결과 (Result) </summary>
-
-```shell
-# Console Stdout
-{
-  "First": 1,
-  "Second": 4.56,
-  "Array": [ "1", 3.45, "Test", true ],
-  "Child": {
-    "ch1": 11,
-    "ch2": 22,
-    "GrandChild": [ "1", 3.45, "Test", true ]
-  },
-  "Third": null,
-  "Last": false
-}
-
-```
-
-</details>
-
-### 11. Make json object : easy way
-
-```cpp
-int main( void )
-{
-    Json jsEasy = JsonObject();
-
-    jsEasy["Hello"]    = "World";
-    jsEasy["Count"]    = 777;
-    jsEasy["Nullable"] = JsonNULL();
-    jsEasy["List"]     = JsonArray( 1, 2, 3, 4 );
-    jsEasy["List2"]    = "[ 4, 5, 6, 7, { \"inList\": [ true, null, -3, 0.123 ] }, false ]";
-    jsEasy["Objects"]  = JsonObject( "child", "value" );
-    jsEasy["Objects2"] = "{ \"Child2\" : \"value2\", \"My\": null }";
-
-    // 보기 좋게 출력
-    cout << jsEasy.toString(ToStringType::Pretty) << endl;
-
-    return 0;
-}
-
-```
-
-<details>
-<summary> 결과 (Result) </summary>
-
-```shell
-# Console Stdout
-{
- "Hello": "World",
- "Count": 777,
- "Nullable": null,
- "List": [ 1, 2, 3, 4 ],
- "List2": [ 4, 5, 6, 7, {
-   "inList": [ true, null, -3, 0.123 ]
-  }, false ],
- "Objects": {
-  "child": "value"
- },
- "Objects2": {
-  "Child2": "value2",
-  "My": null
- }
-}
-
-```
-
-</details>
-
-### 12. File save
-
-```cpp
-int main( void )
-{
-    Json js = Parser::parseFile( "data/Data.json" );
-
-    if (js.saveFile( "data/test_json_to_file_echo.json" )) {
-        cout << "File save done." << endl;
-    }
-
-    return 0;
-}
-
-```
-
-<details>
-<summary> 결과 (Result) </summary>
-
-```bash
-# Console Stdout
-'File save done.'
-
-```
-
-</details>
-
-### 13. Get keys or iteration
-
-```cpp
-int main( void )
-{
-    Json js = Parser::parseFile( "data/Data.json" );
-
-    // 모든 키(key)를 가져옵니다.
-    for( auto& k : js.keys() ) cout << k << endl;
-
-    // Range-based for loop를 사용하여 배열을 순회합니다.
-    for( auto& eachValue : js["examples"] ) {
-        cout << "----------------------------------------------" << endl;
-        cout << eachValue.toString() << endl;
-    }
-
-    return 0;
-}
-
-```
-
-<details>
-<summary> 결과 (Result) </summary>
-
-```bash
-# Console Stdout
-repo_name
-examples
-thanks
-reference_by
-life
-NotYet
-----------------------------------------------
-{
- "author": "so686so",
- "name": "SoByungJun",
- "attr": [ {
-   "key": "link",
-   "value": "http://github.com/so686so/TinyJson"
-  }, {
-   "key": "target",
-   "value": "_everyone_"
-  } ]
-}
-----------------------------------------------
-{
- "this_is": [ "array", "of", "strings" ],
- "number_array": [ 1, 2, 4, 8, 16 ],
- ...
-}
-...
-
-```
-
-</details>
 
 ---
 
-## License: [MIT](https://opensource.org/licenses/MIT)
+## 주의 사항
+
+* **TinyJsonException**: 파싱 실패, 잘못된 타입 접근, Const 객체에서의 없는 키 참조 시 예외가 발생하므로 `try-catch` 처리를 권장합니다.
+* **프로젝트 목적**: 이 프로젝트는 학습 및 경량화 목적으로 제작되었습니다. 극한의 성능이나 모든 JSON 표준 스펙(예: 방대한 유니코드 처리 등)이 필요한 프로덕션 환경에서는 [nlohmann/json](https://github.com/nlohmann/json) 또는 [RapidJSON](https://github.com/Tencent/rapidjson) 사용을 고려하세요.
+
+---
+
+## License
+
+[MIT License](https://opensource.org/licenses/MIT)
+

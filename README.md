@@ -71,7 +71,7 @@ using namespace TinyJson;
 try {
     // 파일에서 로드
     Json js = Parser::parseFile( "data/Data.json" );
-    
+
     // 문자열에서 로드
     Json jsStr = Parser::parse( "{\"key\": \"value\"}" );
 
@@ -104,12 +104,19 @@ if ( js["active"].isBool() ) {
 
 ### 3. 안전한 값 가져오기 (Safe Access)
 
+Json 에 특정 키가 존재하는지 확인하고 싶을 때는 `contains`를 사용하세요.  
 키가 존재하는지, 타입이 맞는지 확실하지 않을 때는 `tryGetAs`를 사용하세요.
 
 ```cpp
+
+// contains: 특정 키 값을 가지고 있는지 체크 가능
+if ( js.contains( "count" ) == false ) {
+    std::cout << "해당 key 값을 가지고 있지 않습니다." << std::endl;
+}
+
+// tryGetAs : 성공 시 true 반환 및 refVal에 값 할당
 int refVal = 0;
 
-// 성공 시 true 반환 및 refVal에 값 할당
 if ( js["count"].tryGetAs<int>( refVal ) ) {
     std::cout << "Count: " << refVal << std::endl;
 } else {
